@@ -15,6 +15,8 @@ import scala.io.Source
 object Cube {
   import scala.collection.JavaConversions._
 
+
+
   def fromCsv(csv: File, db: DB) = {
     val cubeBuilder = new CubeBuilder(db,CubeData.builder(db))
     val lines = Source.fromFile(csv).getLines()

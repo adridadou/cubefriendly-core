@@ -13,13 +13,16 @@ import org.specs2.mutable.Specification
 class LoadFromCsvSpec extends Specification{
   "A Cube data" should {
 
-    def db():DB = DBMaker.newFileDB(new File("fromcsv.cube")).make()
+    def db():DB = DBMaker.newFileDB(new File("fromcsv.cube")).lockThreadUnsafeEnable().make()
 
     "be loaded from CSV" in {
       val cubeName = "test_cube"
+      val mapdb = db()
       val csvFile = new File("src/test/resources/test.csv")
-      val actual: Cube = Cube.fromCsv(csvFile,db()).toCube(cubeName)
+      val actual: Cube = Cube.fromCsv(csvFile,mapdb).toCube(cubeName)
       actual.name must be equalTo cubeName
+
+      mapdb.close()
       success
     }
   }
