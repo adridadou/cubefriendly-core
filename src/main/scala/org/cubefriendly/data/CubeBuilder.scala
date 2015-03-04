@@ -22,7 +22,6 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
       if(!indexed.containsKey(record(index))){
         inversedIndex.put(inversedIndex.size(),record(index))
         indexed.put(record(index),indexed.size())
-        db.commit()
       }
       val vector = record.map(indexed.get(_):Integer).toList
       cubeDataBuilder.add(vector)

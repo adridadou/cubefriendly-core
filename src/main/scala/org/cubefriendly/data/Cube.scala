@@ -1,6 +1,11 @@
 package org.cubefriendly.data
+
+import java.io.File
+
 import org.cubefriendly.engine.cube.CubeData
 import org.mapdb.DB
+
+import scala.io.Source
 
 /**
  * Cubefriendly
@@ -8,6 +13,26 @@ import org.mapdb.DB
  */
 
 object Cube {
+  import scala.collection.JavaConversions._
+
+  def fromCsv(csv: File, db: DB) = {
+    val cubeBuilder = new CubeBuilder(db,CubeData.builder(db))
+    val lines = Source.fromFile(csv).getLines()
+    val header = lines.next().split(";").toVector
+    var counter = 0
+    var timestamp = System.currentTimeMillis()
+    cubeBuilder.header(header)
+    lines.foreach(line => {
+      counter = counter + 1
+      cubeBuilder.record(line.split(";").toVector)
+      if(counter % 1000 == 0){
+        println(counter+";" + (System.currentTimeMillis() - timestamp))
+        timestamp = System.currentTimeMillis()
+      }
+    })
+    cubeBuilder
+  }
+
   def builder(db:DB) : CubeBuilder = new CubeBuilder(db, CubeData.builder(db))
 }
 
