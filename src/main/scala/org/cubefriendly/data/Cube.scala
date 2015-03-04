@@ -3,7 +3,7 @@ package org.cubefriendly.data
 import java.io.File
 
 import org.cubefriendly.engine.cube.CubeData
-import org.mapdb.DB
+import org.mapdb.{DBMaker, DB}
 
 import scala.io.Source
 
@@ -54,7 +54,7 @@ case class Cube(name:String, header:Vector[String], db:DB, cubeData:CubeData) {
       index -> seqAsJavaList(e._2.map(idx.get).toSeq)
     }).toMap
     cubeData.query(mapAsJavaMap(q)).map(v => v.zipWithIndex.map(e => {
-      val inv = db.getTreeMap[Integer,String]("inversed_index_" + e._2)
+      val inv = db.getTreeMap[Integer,String]("index_" + e._2)
       inv.get(e._1)
     }).toVector).toVector
   }

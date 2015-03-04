@@ -1,7 +1,7 @@
 package org.cubefriendly.data
 
 import org.cubefriendly.engine.cube.{CubeDataBuilder, CubeData}
-import org.mapdb.DB
+import org.mapdb.{DBMaker, DB}
 
 import scala.collection.mutable
 
@@ -13,6 +13,7 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   import scala.collection.JavaConversions._
   private var header:Vector[String] = Vector()
   private val dimSize:mutable.HashMap[String,Int] = mutable.HashMap()
+  val tmpDb = DBMaker.newMemoryUnsafeDB().make()
 
   def name(name:String) = {
     cubeDataBuilder.name(name)
@@ -22,7 +23,7 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   def record(record: Vector[String]):CubeBuilder = {
     header.zipWithIndex.foreach({case (dim,index) =>
       val indexed = db.createTreeMap("index_" + index).makeOrGet[String,Int]()
-      val inversedIndex = db.createTreeMap("inversed_index_" + index).makeOrGet[Int,String]()
+      val inversedIndex = tmpDb.createTreeMap("index_" + index).makeOrGet[Int,String]()
       if(!indexed.containsKey(record(index))){
         val size = dimSize.getOrElse(dim,0)
         inversedIndex.put(size,record(index))
