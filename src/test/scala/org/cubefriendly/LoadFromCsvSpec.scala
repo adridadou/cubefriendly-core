@@ -11,9 +11,8 @@ import org.specs2.mutable.Specification
  * Created by david on 03.03.15.
  */
 class LoadFromCsvSpec extends Specification{
-  "A Cube data" should {val tmpDb = DBMaker.newMemoryUnsafeDB().make()
-
-    def db():DB = DBMaker.newFileDB(new File("fromcsv.cube")).lockThreadUnsafeEnable().make()
+  "A Cube data" should {
+    def db():DB = DBMaker.newTempFileDB().lockThreadUnsafeEnable().make()
 
     "be loaded from CSV" in {
       val cubeName = "test_cube"

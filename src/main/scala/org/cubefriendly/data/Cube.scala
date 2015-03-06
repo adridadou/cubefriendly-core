@@ -43,7 +43,7 @@ case class Cube(name:String, header:Vector[String], db:DB, cubeData:CubeData) {
   def dimensions(name: String):Dimension = {
     header.indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name)
-      case i => Dimension(name,db.getTreeMap[Int,String]("inversed_index_" + i).values().toVector)
+      case i => Dimension(name,db.getTreeMap[Int,String]("inversed_index_" + i).values().iterator())
     }
   }
 
@@ -53,11 +53,13 @@ case class Cube(name:String, header:Vector[String], db:DB, cubeData:CubeData) {
       val idx = db.getTreeMap[String,Integer]("index_" + index)
       index -> seqAsJavaList(e._2.map(idx.get).toSeq)
     }).toMap
-    cubeData.query(mapAsJavaMap(q)).map(v => v.zipWithIndex.map(e => {
-      val inv = db.getTreeMap[Integer,String]("index_" + e._2)
-      inv.get(e._1)
+    val result = cubeData.query(mapAsJavaMap(q)).map(v => v.zipWithIndex.map({case(value,index) =>
+      val inv = db.getTreeMap[Integer,String]("inversed_index_" + index)
+      inv.get(value)
     }).toVector).toVector
+
+    result
   }
 }
 
-case class Dimension(name:String, values:Vector[String])
+case class Dimension(name:String, values:Iterator[String])
