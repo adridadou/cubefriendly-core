@@ -11,7 +11,7 @@ import scala.collection.mutable
  */
 class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   import scala.collection.JavaConversions._
-  private var header:Vector[String] = Vector()
+  private val header:mutable.Buffer[String] = mutable.Buffer()
   private val dimSize:mutable.HashMap[String,Int] = mutable.HashMap()
 
   def name(name:String) = {
@@ -37,7 +37,8 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   }
 
   def header(header:Vector[String]):CubeBuilder = {
-    this.header = header
+    this.header.clear()
+    this.header.append(header)
     this
   }
   def toCube(name:String) = Cube(name,header,db,cubeDataBuilder.build())
