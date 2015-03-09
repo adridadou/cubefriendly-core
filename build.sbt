@@ -7,6 +7,7 @@ scalaVersion := "2.11.5"
 resolvers ++= Seq(
   "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository" ,
   "Snapshot cubefriendly" at "http://cubefriendly-maven.s3.amazonaws.com/snapshot",
+  "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/",
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/")
 
 libraryDependencies ++= Seq(

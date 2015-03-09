@@ -38,9 +38,9 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
 
   def header(header:Vector[String]):CubeBuilder = {
     this.header.clear()
-    this.header.append(header)
+    this.header.append(header :_*)
     this
   }
-  def toCube(name:String) = Cube(name,header,db,cubeDataBuilder.build())
+  def toCube(name:String) = Cube(name,header.toVector,db,cubeDataBuilder.build())
 }
 
