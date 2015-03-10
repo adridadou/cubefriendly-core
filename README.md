@@ -4,6 +4,7 @@
 
 [![Codacy Badge](https://www.codacy.com/project/badge/21c79364bf274815ad21b06d5319766f)](https://www.codacy.com/public/cubefriendly/cubefriendly-core)
 
+[![Coverage Status](https://coveralls.io/repos/cubefriendly/cubefriendly-core/badge.svg)](https://coveralls.io/r/cubefriendly/cubefriendly-core)
 
 Cubefriendly core library
 
