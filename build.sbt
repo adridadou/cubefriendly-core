@@ -1,3 +1,7 @@
+import CoverallsPlugin.CoverallsKeys._
+
+coverallsToken := sys.props("COVERALLS_REPO_TOKEN")
+
 name := """cubefriendly-core"""
 
 version := "0.1-SNAPSHOT"
