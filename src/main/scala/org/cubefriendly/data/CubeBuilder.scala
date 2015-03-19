@@ -1,8 +1,8 @@
 package org.cubefriendly.data
 
-import org.cubefriendly.engine.cube.{CubeDataBuilder, CubeData}
-import org.mapdb.{DBMaker, DB}
-
+import org.cubefriendly.engine.cube.CubeDataBuilder
+import org.mapdb.DB
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 /**
@@ -10,7 +10,6 @@ import scala.collection.mutable
  * Created by david on 23.02.15.
  */
 class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
-  import scala.collection.JavaConversions._
   private val header:mutable.Buffer[String] = mutable.Buffer()
   private val metrics:mutable.Buffer[String] = mutable.Buffer()
   private val dimSize:mutable.HashMap[String,Int] = mutable.HashMap()
