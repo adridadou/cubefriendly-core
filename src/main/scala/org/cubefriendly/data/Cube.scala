@@ -5,7 +5,7 @@ import java.io.File
 import org.cubefriendly.CubefriendlyException
 import org.cubefriendly.engine.cube.CubeData
 import org.cubefriendly.reflection.Aggregator
-import org.mapdb.DB
+import org.mapdb.{DBMaker, DB}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -28,6 +28,15 @@ object Cube {
   }
 
   def builder(db:DB) : CubeBuilder = new CubeBuilder(db, CubeData.builder(db))
+
+  def open(file:File) = {
+    val db = DBMaker.newFileDB(file).make()
+
+    val metaString = db.getTreeMap[String,String]("meta_string")
+    val metaSeqString = db.getTreeMap[String,Vector[String]]("meta_vec_string")
+
+    Cube(metaString.get("name"),metaSeqString.get("header"),db,CubeData.builder(db).build())
+  }
 }
 
 class QueryBuilder(val cube:Cube) {
@@ -115,6 +124,8 @@ object QueryBuilder {
 }
 
 case class Cube(name:String, header:Vector[String], db:DB, cubeData:CubeData) {
+  def close():Unit = db.close()
+
   def dimensions(name: String):Dimension = {
     header.indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name)

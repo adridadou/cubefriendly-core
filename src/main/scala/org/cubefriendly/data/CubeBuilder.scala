@@ -17,6 +17,8 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
 
   def name(name:String):CubeBuilder = {
     cubeDataBuilder.name(name)
+    val metaString = db.getTreeMap[String,String]("meta_string")
+    metaString.put("name",name)
     this
   }
 
@@ -40,11 +42,18 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   def header(header:Vector[String]):CubeBuilder = {
     this.header.clear()
     this.header.append(header :_*)
+    val metaVecString = db.getTreeMap[String,Vector[String]]("meta_vec_string")
+    metaVecString.put("header",this.header.toVector)
+    db.commit()
     this
   }
 
-  def addMetric(name:String) = {
+  def addMetric(name:String):CubeBuilder = {
     this.metrics.append(name)
+    val metaVecString = db.getTreeMap[String,Vector[String]]("meta_vec_string")
+    metaVecString.put("metrics",this.metrics.toVector)
+    db.commit()
+    this
   }
 
   def toCube(name:String):Cube = Cube(name,header.toVector,db,cubeDataBuilder.build())

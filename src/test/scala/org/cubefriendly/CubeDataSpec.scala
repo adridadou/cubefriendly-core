@@ -1,5 +1,7 @@
 package org.cubefriendly
 
+import java.io.File
+
 import org.cubefriendly.data.{QueryBuilder, Cube}
 import org.cubefriendly.reflection.Aggregator
 import org.mapdb.{DB, DBMaker}
@@ -95,7 +97,7 @@ class CubeDataSpec extends Specification  {
     }
 
     "aggregate values with sum function" in {
-      Aggregator.registerSum
+      Aggregator.registerSum()
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
       val cube:Cube = Cube.builder(db()).header(header)
@@ -114,7 +116,7 @@ class CubeDataSpec extends Specification  {
     }
 
     "aggregate values with sum function and eliminate one" in {
-      Aggregator.registerSum
+      Aggregator.registerSum()
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
       val cube:Cube = Cube.builder(db()).header(header)
@@ -129,6 +131,29 @@ class CubeDataSpec extends Specification  {
       ).groupBy("year").reduce("debt" -> "sum").run().toSeq
 
       actual must contain(exactly(Vector("1990","66000000")))
+    }
+
+    "open a cube that was previously created" in {
+      val cubeName = "test_cube"
+      val header = Vector("year","country","debt")
+      val file = File.createTempFile("test","cube")
+      val actual:Cube = Cube.builder(DBMaker.newFileDB(file).make()).header(header).record(Vector("1990","Switzerland","30000000")).toCube(cubeName)
+
+      actual.header must contain(exactly("year","country","debt"))
+
+      actual.dimensions("year").values must contain(exactly("1990"))
+      actual.dimensions("country").values must contain(exactly("Switzerland"))
+      actual.dimensions("debt").values must contain(exactly("30000000"))
+
+      actual.close()
+
+      val reopen:Cube = Cube.open(file)
+
+      reopen.header must contain(exactly("year","country","debt"))
+
+      reopen.dimensions("year").values must contain(exactly("1990"))
+      reopen.dimensions("country").values must contain(exactly("Switzerland"))
+      reopen.dimensions("debt").values must contain(exactly("30000000"))
     }
 
   }
