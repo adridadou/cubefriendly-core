@@ -20,7 +20,7 @@ trait Aggregator {
 
 object Aggregator {
 
-  def registerSum = {
+  def registerSum():Unit = {
     val init = "BigDecimal(0)"
     val finish = "state.toString"
     val reduce = "{state += BigDecimal(value)\nthis}"
@@ -31,7 +31,7 @@ object Aggregator {
   private val funcs:mutable.HashMap[String,Tree] = mutable.HashMap()
 
   def newFunc[T](name:String):Aggregator = newFunc(funcs(name))
-  def register(name:String, init:String,reduce:String, finish:String) = {
+  def register(name:String, init:String,reduce:String, finish:String):Unit = {
     val func = parse(init,reduce,finish)
     funcs.put(name,func)
   }

@@ -12,6 +12,7 @@ import scala.collection.mutable
 class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   import scala.collection.JavaConversions._
   private val header:mutable.Buffer[String] = mutable.Buffer()
+  private val metrics:mutable.Buffer[String] = mutable.Buffer()
   private val dimSize:mutable.HashMap[String,Int] = mutable.HashMap()
 
   def name(name:String):CubeBuilder = {
@@ -20,7 +21,7 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   }
 
   def record(record: Vector[String]):CubeBuilder = {
-    val vector = header.zipWithIndex.map({case (dim,index) =>
+    val vector = header.filter(dim => !metrics.contains(dim)).zipWithIndex.map({case (dim,index) =>
       val indexed = db.createTreeMap("index_" + index).makeOrGet[String,Int]()
       if(!indexed.containsKey(record(index))){
         val size = dimSize.getOrElse(dim,1)
@@ -32,7 +33,7 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
       indexed.get(record(index)):Integer
     }).toList
 
-    cubeDataBuilder.add(vector)
+    cubeDataBuilder.add(vector,metrics)
     this
   }
 
@@ -41,6 +42,11 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
     this.header.append(header :_*)
     this
   }
+
+  def addMetric(name:String) = {
+    this.metrics.append(name)
+  }
+
   def toCube(name:String):Cube = Cube(name,header.toVector,db,cubeDataBuilder.build())
 }
 

@@ -18,8 +18,9 @@ import scala.io.Source
 
 object Cube {
 
-  def fromCsv(csv: File, db: DB):CubeBuilder = {
+  def fromCsv(csv: File, db: DB, metrics:Seq[String]):CubeBuilder = {
     val cubeBuilder = new CubeBuilder(db,CubeData.builder(db))
+    metrics.foreach(cubeBuilder.addMetric)
     val lines = Source.fromFile(csv).getLines()
     cubeBuilder.header(lines.next().split(";").toVector)
     lines.foreach(line => cubeBuilder.record(line.split(";").toVector))
@@ -62,8 +63,32 @@ class QueryBuilder(val cube:Cube) {
     }
   }
 
-  def run(): Iterator[Vector[String]] = {
+  private def aggregate(result:Iterator[Vector[String]]): Iterator[Vector[String]] = {
+    val aggregatedResult = mutable.HashMap[Vector[(Int,String)],mutable.HashMap[Int,Aggregator]]()
+    result.foreach(record => {
+      val newKey = record.zipWithIndex.filter({case(elem,index) => groupByValues.contains(index)}).map({case (elem,index) => (index,record.get(index))})
+      val aggregationMap = aggregatedResult.getOrElseUpdate(newKey,mutable.HashMap())
+      reduceValues.keys.foreach(idx =>{
+        val current:Aggregator = aggregationMap.getOrElseUpdate(idx,Aggregator.newFunc(reduceValues(idx)))
+        current.reduce(record(idx))
+      })
+    })
+    val tmp = aggregatedResult.map({case(key,value) =>
+      (0 until cube.header.length).filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
+        if(groupByValues.contains(idx)){
+          key.find({case(index,_) => index == idx}) match {
+            case Some((i,v)) => v
+            case None => throw new CubefriendlyException("Serious bug while aggregating value. Trying to get a value that does not exist!")
+          }
+        }else {
+          value(idx).finish
+        }
+      ).toVector
+    })
+    tmp.toIterator
+  }
 
+  def run(): Iterator[Vector[String]] = {
     validateAggregation()
 
     val q = selectedValues.map({ case (key, values) =>
@@ -78,29 +103,7 @@ class QueryBuilder(val cube:Cube) {
     }).toVector)
 
     if(groupByValues.nonEmpty || reduceValues.nonEmpty){
-      val aggregatedResult = mutable.HashMap[Vector[(Int,String)],mutable.HashMap[Int,Aggregator]]()
-
-      result.foreach(record => {
-        val newKey = record.zipWithIndex.filter({case(elem,index) => groupByValues.contains(index)}).map({case (elem,index) => (index,record.get(index))})
-        val aggregationMap = aggregatedResult.getOrElseUpdate(newKey,mutable.HashMap())
-        reduceValues.keys.foreach(idx =>{
-          val current:Aggregator = aggregationMap.getOrElseUpdate(idx,Aggregator.newFunc(reduceValues(idx)))
-          current.reduce(record(idx))
-        })
-      })
-      val tmp = aggregatedResult.map({case(key,value) =>
-        (0 until cube.header.length).filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
-          if(groupByValues.contains(idx)){
-            key.find({case(index,_) => index == idx}) match {
-              case Some((i,v)) => v
-              case None => throw new CubefriendlyException("Serious bug while aggregating value. Trying to get a value that does not exist!")
-            }
-          }else {
-            value(idx).finish
-          }
-        ).toVector
-      })
-      tmp.toIterator
+      aggregate(result)
     }else {
       result
     }
@@ -108,7 +111,7 @@ class QueryBuilder(val cube:Cube) {
 }
 
 object QueryBuilder {
-  def query(cube:Cube) = new QueryBuilder(cube)
+  def query(cube:Cube):QueryBuilder = new QueryBuilder(cube)
 }
 
 case class Cube(name:String, header:Vector[String], db:DB, cubeData:CubeData) {
