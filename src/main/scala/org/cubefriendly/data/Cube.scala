@@ -18,7 +18,7 @@ import scala.io.Source
 
 object Cube {
 
-  def fromCsv(csv: File, db: DB) = {
+  def fromCsv(csv: File, db: DB):CubeBuilder = {
     val cubeBuilder = new CubeBuilder(db,CubeData.builder(db))
     val lines = Source.fromFile(csv).getLines()
     cubeBuilder.header(lines.next().split(";").toVector)
@@ -91,7 +91,7 @@ class QueryBuilder(val cube:Cube) {
       val tmp = aggregatedResult.map({case(key,value) =>
         (0 until cube.header.length).filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
           if(groupByValues.contains(idx)){
-            key.find(_._1 == idx) match {
+            key.find({case(index,_) => index == idx}) match {
               case Some((i,v)) => v
               case None => throw new CubefriendlyException("Serious bug while aggregating value. Trying to get a value that does not exist!")
             }
@@ -112,7 +112,6 @@ object QueryBuilder {
 }
 
 case class Cube(name:String, header:Vector[String], db:DB, cubeData:CubeData) {
-  import scala.collection.JavaConversions._
   def dimensions(name: String):Dimension = {
     header.indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name)

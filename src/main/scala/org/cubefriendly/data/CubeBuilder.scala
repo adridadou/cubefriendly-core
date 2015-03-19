@@ -14,7 +14,7 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   private val header:mutable.Buffer[String] = mutable.Buffer()
   private val dimSize:mutable.HashMap[String,Int] = mutable.HashMap()
 
-  def name(name:String) = {
+  def name(name:String):CubeBuilder = {
     cubeDataBuilder.name(name)
     this
   }
@@ -41,6 +41,6 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
     this.header.append(header :_*)
     this
   }
-  def toCube(name:String) = Cube(name,header.toVector,db,cubeDataBuilder.build())
+  def toCube(name:String):Cube = Cube(name,header.toVector,db,cubeDataBuilder.build())
 }
 
