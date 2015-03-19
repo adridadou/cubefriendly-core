@@ -29,7 +29,7 @@ object Cube {
 
   def builder(db:DB) : CubeBuilder = new CubeBuilder(db, CubeData.builder(db))
 
-  def open(file:File) = {
+  def open(file:File):Cube = {
     val db = DBMaker.newFileDB(file).make()
 
     val metaString = db.getTreeMap[String,String]("meta_string")
