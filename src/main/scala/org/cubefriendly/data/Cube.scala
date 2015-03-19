@@ -106,7 +106,7 @@ class QueryBuilder(val cube:Cube) {
       index -> seqAsJavaList(values.map(idx.get).toSeq)
     }).toMap
     val result = cube.cubeData.query(mapAsJavaMap(q)).map(v =>
-      v.zipWithIndex.map({case(value,index) =>
+      v.vector.zipWithIndex.map({case(value,index) =>
       val inv = cube.db.getTreeMap[Integer,String]("inversed_index_" + index)
       inv.get(value)
     }).toVector)
