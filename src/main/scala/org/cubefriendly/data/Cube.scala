@@ -55,7 +55,7 @@ class QueryBuilder(val cube:Cube) {
   }
   private def validateAggregation() = {
     if(groupByValues.size + reduceValues.size > 0){
-      val setMoreThanOnce = (0 until cube.header.size).filter(h => !(groupByValues.contains(h) ^ reduceValues.keys.contains(h)))
+      val setMoreThanOnce = (0 until cube.header.size).filter(h => groupByValues.contains(h) && reduceValues.keys.contains(h))
       if(setMoreThanOnce.nonEmpty){
         throw new CubefriendlyException("you cannot set a dimension for group by and reduce at the same time:" + setMoreThanOnce)
       }
@@ -64,7 +64,7 @@ class QueryBuilder(val cube:Cube) {
 
   def run(): Iterator[Vector[String]] = {
 
-    validateAggregation
+    validateAggregation()
 
     val q = selectedValues.map({ case (key, values) =>
       val index: Integer = cube.header.indexOf(key)

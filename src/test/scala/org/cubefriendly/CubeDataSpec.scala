@@ -113,5 +113,23 @@ class CubeDataSpec extends Specification  {
       actual must contain(exactly(Vector("1990","Switzerland","33000000")))
     }
 
+    "aggregate values with sum function and eliminate one" in {
+      Aggregator.registerSum
+      val cubeName = "test_cube"
+      val header = Vector("year","country","debt")
+      val cube:Cube = Cube.builder(db()).header(header)
+        .record(Vector("1990","Switzerland","30000000"))
+        .record(Vector("1990","France","30000000"))
+        .record(Vector("1990","France","3000000"))
+        .record(Vector("1990","Switzerland","3000000"))
+        .toCube(cubeName)
+
+      val actual = QueryBuilder.query(cube).where(
+        "year" -> Vector("1990")
+      ).groupBy("year").reduce("debt" -> "sum").run().toSeq
+
+      actual must contain(exactly(Vector("1990","66000000")))
+    }
+
   }
 }
