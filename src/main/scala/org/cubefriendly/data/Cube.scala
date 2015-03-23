@@ -18,24 +18,15 @@ import scala.io.Source
 
 object Cube {
 
-  def fromCsv(csv: File, db: DB, metrics:Seq[String]):CubeBuilder = {
-    val cubeBuilder = new CubeBuilder(db,CubeData.builder(db))
-    metrics.foreach(cubeBuilder.addMetric)
-    val lines = Source.fromFile(csv).getLines()
-    cubeBuilder.header(lines.next().split(";").toVector)
-    lines.foreach(line => cubeBuilder.record(line.split(";").toVector))
-    cubeBuilder
-  }
-
   def builder(db:DB) : CubeBuilder = new CubeBuilder(db, CubeData.builder(db))
 
   def open(file:File):Cube = {
     val db = DBMaker.newFileDB(file).make()
 
     val metaString = db.getTreeMap[String,String]("meta_string")
-    val metaSeqString = db.getTreeMap[String,Vector[String]]("meta_vec_string")
+    val metaVecString = db.getTreeMap[String,Vector[String]]("meta_vec_string")
 
-    Cube(metaString.get("name"),metaSeqString.get("header"),db,CubeData.builder(db).build())
+    Cube(metaString.get("name"),metaVecString.get("header"),metaVecString.get("metrics"),db,CubeData.builder(db).build())
   }
 }
 
@@ -43,6 +34,7 @@ class QueryBuilder(val cube:Cube) {
   private val selectedValues: mutable.HashMap[String, Vector[String]] = mutable.HashMap()
   private val groupByValues: mutable.Buffer[Int] = mutable.Buffer()
   private val reduceValues:mutable.HashMap[Int,String] = mutable.HashMap()
+  private val reduceMetrics:mutable.HashMap[Int,String] = mutable.HashMap()
 
   def where(where: (String, Vector[String])*): QueryBuilder = this.where(where.toMap)
 
@@ -60,44 +52,60 @@ class QueryBuilder(val cube:Cube) {
   }
 
   def reduce(by: (String, String)*): QueryBuilder = {
-    reduceValues.putAll(mapAsJavaMap(by.map({case(key,value) => cube.header.indexOf(key) -> value}).toMap))
+    by.foreach({case(key,value) =>
+      if(cube.header.indexOf(key) > -1){
+        reduceValues.put(cube.header.indexOf(key), value)
+      }else if(cube.metrics.indexOf(key) > -1){
+        reduceMetrics.put(cube.metrics.indexOf(key) , value)
+      }else {
+        throw new CubefriendlyException("dimension / metric not found \"" + key + "\"")
+      }
+    })
     this
   }
   private def validateAggregation() = {
     if(groupByValues.size + reduceValues.size > 0){
       val setMoreThanOnce = (0 until cube.header.size).filter(h => groupByValues.contains(h) && reduceValues.keys.contains(h))
+
       if(setMoreThanOnce.nonEmpty){
         throw new CubefriendlyException("you cannot set a dimension for group by and reduce at the same time:" + setMoreThanOnce)
       }
     }
   }
 
-  private def aggregate(result:Iterator[Vector[String]]): Iterator[Vector[String]] = {
-    val aggregatedResult = mutable.HashMap[Vector[(Int,String)],mutable.HashMap[Int,Aggregator]]()
-    result.foreach(record => {
+  private def aggregate(result:Iterator[(Vector[String],Vector[String])]): Iterator[(Vector[String],Vector[String])] = {
+    val aggregatedResult = mutable.HashMap[Vector[(Int,String)],(mutable.HashMap[Int,Aggregator],mutable.HashMap[Int,Aggregator])]()
+    result.foreach({case (record,metrics) =>
       val newKey = record.zipWithIndex.filter({case(elem,index) => groupByValues.contains(index)}).map({case (elem,index) => (index,record.get(index))})
-      val aggregationMap = aggregatedResult.getOrElseUpdate(newKey,mutable.HashMap())
+      val (aggregationMap,aggregationMetricsMap) = aggregatedResult.getOrElseUpdate(newKey,(mutable.HashMap(),mutable.HashMap()))
       reduceValues.keys.foreach(idx =>{
         val current:Aggregator = aggregationMap.getOrElseUpdate(idx,Aggregator.newFunc(reduceValues(idx)))
         current.reduce(record(idx))
       })
+
+      reduceMetrics.keys.foreach(idx =>{
+        val current:Aggregator = aggregationMetricsMap.getOrElseUpdate(idx,Aggregator.newFunc(reduceMetrics.getOrElse(idx,"sum")))
+        current.reduce(metrics(idx))
+      })
     })
-    val tmp = aggregatedResult.map({case(key,value) =>
-      (0 until cube.header.length).filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
+    aggregatedResult.map({case(key,(dims,metrics)) =>
+      ((0 until cube.header.length).filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
         if(groupByValues.contains(idx)){
           key.find({case(index,_) => index == idx}) match {
             case Some((i,v)) => v
             case None => throw new CubefriendlyException("Serious bug while aggregating value. Trying to get a value that does not exist!")
           }
         }else {
-          value(idx).finish
+          dims(idx).finish
         }
-      ).toVector
-    })
-    tmp.toIterator
+      ).toVector,
+      (0 until cube.metrics.length).map(idx =>
+        metrics(idx).finish
+      ).toVector)
+    }).toIterator
   }
 
-  def run(): Iterator[Vector[String]] = {
+  def run(): Iterator[(Vector[String],Vector[String])] = {
     validateAggregation()
 
     val q = selectedValues.map({ case (key, values) =>
@@ -106,10 +114,10 @@ class QueryBuilder(val cube:Cube) {
       index -> seqAsJavaList(values.map(idx.get).toSeq)
     }).toMap
     val result = cube.cubeData.query(mapAsJavaMap(q)).map(v =>
-      v.vector.zipWithIndex.map({case(value,index) =>
+      (v.vector.zipWithIndex.map({case(value,index) =>
       val inv = cube.db.getTreeMap[Integer,String]("inversed_index_" + index)
       inv.get(value)
-    }).toVector)
+    }).toVector,v.metrics.toVector))
 
     if(groupByValues.nonEmpty || reduceValues.nonEmpty){
       aggregate(result)
@@ -123,7 +131,7 @@ object QueryBuilder {
   def query(cube:Cube):QueryBuilder = new QueryBuilder(cube)
 }
 
-case class Cube(name:String, header:Vector[String], db:DB, cubeData:CubeData) {
+case class Cube(name:String, header:Vector[String], metrics:Vector[String], db:DB, cubeData:CubeData) {
   def close():Unit = db.close()
 
   def dimensions(name: String):Dimension = {
