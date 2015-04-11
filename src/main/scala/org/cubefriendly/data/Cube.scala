@@ -20,6 +20,11 @@ object Cube {
 
   def builder(db:DB) : CubeBuilder = new CubeBuilder(db, CubeData.builder(db))
 
+  def builder(file:File):CubeBuilder = {
+    val db = DBMaker.newFileDB(file).make()
+    new CubeBuilder(db,CubeData.builder(db))
+  }
+
   def open(file:File):Cube = {
     val db = DBMaker.newFileDB(file).make()
 
