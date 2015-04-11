@@ -9,7 +9,6 @@ import org.mapdb.{DBMaker, DB}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.io.Source
 
 /**
  * Cubefriendly
@@ -57,14 +56,10 @@ class QueryBuilder(val cube:Cube) {
   }
 
   def reduce(by: (String, String)*): QueryBuilder = {
-    by.foreach({case(key,value) =>
-      if(cube.header.indexOf(key) > -1){
-        reduceValues.put(cube.header.indexOf(key), value)
-      }else if(cube.metrics.indexOf(key) > -1){
-        reduceMetrics.put(cube.metrics.indexOf(key) , value)
-      }else {
-        throw new CubefriendlyException("dimension / metric not found \"" + key + "\"")
-      }
+    by.foreach({
+      case (key,value) if cube.header.indexOf(key) > -1 => reduceValues.put(cube.header.indexOf(key), value)
+      case (key,value) if cube.metrics.indexOf(key) > -1 => reduceMetrics.put(cube.metrics.indexOf(key) , value)
+      case (key,value) => throw new CubefriendlyException("dimension / metric not found \"" + key + "\"")
     })
     this
   }
