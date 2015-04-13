@@ -10,9 +10,7 @@ import scala.io.Source
  * Cubefriendly
  * Created by david on 11.04.15.
  */
-class CsvProcessor(val lines:Iterator[String], val header : CsvHeader) extends DataProcessor {
-
-}
+class CsvProcessor(val lines:Iterator[String], val header : CsvHeader) extends DataProcessor
 
 
 object CsvProcessor {
@@ -32,7 +30,7 @@ object CsvProcessor {
     val headerResult = separators.map(c => c -> csvHeader.split(c).toSeq).toMap
     val entryResult = separators.map(c => c -> entry.split(c).toSeq).toMap
 
-    (for(separator <- separators if headerResult(separator).length > 1 && headerResult(separator).length == entryResult(separator).length) yield separator) match {
+    (for(s <- separators if headerResult(s).length > 1 && headerResult(s).length == entryResult(s).length) yield s) match {
       case result if result.isEmpty => throw new CubefriendlyException("no suitable separator found")
       case result if result.length > 1 => throw new CubefriendlyException("found more than one possible separator. Please select the correct one: " + result)
       case r => CsvHeader(r.head,headerResult(r.head))
