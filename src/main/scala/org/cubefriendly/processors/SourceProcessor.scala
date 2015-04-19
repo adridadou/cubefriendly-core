@@ -2,7 +2,9 @@ package org.cubefriendly.processors
 
 import java.io.File
 
-import scaldi.{Injectable, Injector, Module}
+import org.cubefriendly.data.Cube
+import org.mapdb.DB
+import scaldi.Module
 
 /**
  * Cubefriendly
@@ -10,6 +12,8 @@ import scaldi.{Injectable, Injector, Module}
  */
 trait DataProcessor {
   def header():DataHeader
+
+  def process(config: CubeConfig, db: DB): Cube
 }
 
 trait DataHeader {
@@ -21,9 +25,11 @@ trait DataProcessorProvider {
 }
 
 class DataProcessorModule extends Module {
-  bind[DataProcessorProvider] to new DataProcessorProviderImpl
+  bind[DataProcessorProvider] to injected[DataProcessorProviderImpl]
 }
 
-class DataProcessorProviderImpl(implicit inj: Injector) extends DataProcessorProvider with Injectable {
+class DataProcessorProviderImpl extends DataProcessorProvider {
   override def forSource(file: File): DataProcessor = CsvProcessor(file = file)
 }
+
+case class CubeConfig(name: String, metrics: Seq[String])

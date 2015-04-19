@@ -1,12 +1,11 @@
 package org.cubefriendly.data
 
-import java.io.File
 
-import org.cubefriendly.engine.cube.{CubeData, CubeDataBuilder}
+import org.cubefriendly.engine.cube.CubeDataBuilder
 import org.mapdb.DB
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.io.Source
 
 /**
  * Cubefriendly
@@ -17,8 +16,7 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   private val header:mutable.Buffer[String] = mutable.Buffer()
   private val metrics:mutable.Buffer[String] = mutable.Buffer()
   private val dimSize:mutable.HashMap[String,Int] = mutable.HashMap()
-  private var source:Option[File] = None
-  private var csvSeparator = ""
+
 
   def metrics(metricList: String*):CubeBuilder = {
     metrics.appendAll(metricList)
@@ -27,12 +25,6 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
     metaVecString.put("metrics",this.metrics.toVector)
     db.commit()
 
-    this
-  }
-
-  def csv(file: File, separator: String):CubeBuilder = {
-    source = Some(file)
-    csvSeparator = separator
     this
   }
 
@@ -71,12 +63,6 @@ class CubeBuilder(val db:DB, cubeDataBuilder:CubeDataBuilder) {
   }
 
   def toCube(name:String):Cube = {
-    source.foreach(csv => {
-      val lines = Source.fromFile(csv).getLines()
-      header(lines.next().split(csvSeparator).toVector)
-      lines.filter(_.nonEmpty).foreach(line => record(line.split(csvSeparator).toVector))
-    })
-
     Cube(name,header.toVector,metrics.toVector,db,cubeDataBuilder.build())
   }
 }
