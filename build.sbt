@@ -28,6 +28,7 @@ timingFormat := {
 libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-reflect" % "2.11.6",
   "org.scala-lang" % "scala-compiler" % "2.11.6",
+  "org.scaldi" %% "scaldi" % "0.5.4",
   "org.cubefriendly" % "cube-engine" % "0.1-SNAPSHOT",
   "com.typesafe.akka" %% "akka-actor" % "2.3.9",
   "com.typesafe.akka" %% "akka-testkit" % "2.3.9" % "test",
