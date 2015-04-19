@@ -2,7 +2,7 @@ package org.cubefriendly
 
 import java.io.File
 
-import org.cubefriendly.data.{QueryBuilder, Cube}
+import org.cubefriendly.data.{Cube, QueryBuilder}
 import org.cubefriendly.reflection.Aggregator
 import org.mapdb.{DB, DBMaker}
 import org.specs2.mutable._
@@ -73,7 +73,7 @@ class CubeDataSpec extends Specification  {
 
       val actual = QueryBuilder.query(cube).where(Map(
         "country" -> Vector("Switzerland")
-      )).run().map(_._1)
+      )).run().map({ case (key, value) => key })
 
       actual must contain(exactly(Vector("1990","Switzerland","30000000"), Vector("1990","Switzerland","3000000")))
     }
@@ -91,7 +91,7 @@ class CubeDataSpec extends Specification  {
       val actual = QueryBuilder.query(cube).where(
         "country" -> Vector("Switzerland"),
         "year" -> Vector("1990")
-      ).run().map(_._1)
+      ).run().map({ case (key, value) => key })
 
       actual must contain(exactly(Vector("1990","Switzerland","30000000"), Vector("1990","Switzerland","3000000")))
     }
@@ -110,7 +110,7 @@ class CubeDataSpec extends Specification  {
       val actual = QueryBuilder.query(cube).where(
         "country" -> Vector("Switzerland"),
         "year" -> Vector("1990")
-      ).groupBy("year","country").reduce("debt" -> "sum").run().map(_._1)
+      ).groupBy("year", "country").reduce("debt" -> "sum").run().map({ case (key, value) => key })
 
       actual must contain(exactly(Vector("1990","Switzerland","33000000")))
     }
@@ -128,7 +128,7 @@ class CubeDataSpec extends Specification  {
 
       val actual = QueryBuilder.query(cube).where(
         "year" -> Vector("1990")
-      ).groupBy("year").reduce("debt" -> "sum").run().map(_._1)
+      ).groupBy("year").reduce("debt" -> "sum").run().map({ case (key, value) => key })
 
       actual must contain(exactly(Vector("1990","66000000")))
     }
