@@ -6,6 +6,8 @@
 
 Cubefriendly core library
 
-Cubefriendly-core is the query engine of cubefriendly.
+Cubefriendly-core is Cubefriendly's engine.
+
+Please go to https://github.com/cubefriendly/cubefriendly-studio if you are looking for the application.
 
 Documentation will come in the Wiki
