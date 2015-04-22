@@ -12,8 +12,7 @@ resolvers ++= Seq(
   "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/",
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/")
 
-
-publishMavenStyle := false
+publishMavenStyle := true
 
 publishTo := {
   val repoType = if (isSnapshot.value) "snapshot" else "release"
