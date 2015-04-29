@@ -16,7 +16,7 @@ class CsvProcessor(val lines: Iterator[String], val header: CsvHeader) extends D
   override def process(config: CubeConfig, db: DB): Cube = {
     val builder = Cube.builder(db).header(lines.next().split(header.separator).toVector).metrics(config.metrics: _*)
     lines.filter(_.nonEmpty).foreach(line => builder.record(line.split(header.separator).toVector))
-    builder.toCube(config.name)
+    builder.name(config.name).toCube
   }
 }
 

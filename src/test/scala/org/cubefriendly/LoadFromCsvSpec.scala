@@ -13,7 +13,7 @@ import org.specs2.mutable.Specification
  */
 class LoadFromCsvSpec extends Specification{
   "A Cube data" should {
-    def db():DB = DBMaker.newTempFileDB().lockThreadUnsafeEnable().make()
+    def db():DB = DBMaker.tempFileDB().make()
 
     "be loaded from CSV" in {
       val cubeName = "test_cube"

@@ -20,15 +20,15 @@ object Cube {
   def builder(db:DB) : CubeBuilder = new CubeBuilder(db, CubeData.builder(db))
 
   def builder(file:File):CubeBuilder = {
-    val db = DBMaker.newFileDB(file).make()
+    val db = DBMaker.fileDB(file).make()
     new CubeBuilder(db,CubeData.builder(db))
   }
 
   def open(file:File):Cube = {
-    val db = DBMaker.newFileDB(file).make()
+    val db = DBMaker.fileDB(file).make()
 
-    val metaString = db.getTreeMap[String,String]("meta_string")
-    val metaVecString = db.getTreeMap[String,Vector[String]]("meta_vec_string")
+    val metaString = db.treeMap[String,String]("meta_string")
+    val metaVecString = db.treeMap[String,Vector[String]]("meta_vec_string")
 
     Cube(metaString.get("name"),metaVecString.get("header"),metaVecString.get("metrics"),db,CubeData.builder(db).build())
   }
@@ -110,12 +110,12 @@ class QueryBuilder(val cube:Cube) {
 
     val q = selectedValues.map({ case (key, values) =>
       val index: Integer = cube.header.indexOf(key)
-      val idx = cube.db.getTreeMap[String, Integer]("index_" + index)
+      val idx = cube.db.treeMap[String, Integer]("index_" + index)
       index -> seqAsJavaList(values.map(idx.get).toSeq)
     }).toMap
     val result = cube.cubeData.query(mapAsJavaMap(q)).map(v =>
       (v.vector.zipWithIndex.map({case(value,index) =>
-      val inv = cube.db.getTreeMap[Integer,String]("inversed_index_" + index)
+      val inv = cube.db.treeMap[Integer,String]("inversed_index_" + index)
       inv.get(value)
     }).toVector,v.metrics.toVector))
 
@@ -137,7 +137,7 @@ case class Cube(name:String, header:Vector[String], metrics:Vector[String], db:D
   def dimensions(name: String):Dimension = {
     header.indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name)
-      case i => Dimension(name,db.getTreeMap[Int,String]("inversed_index_" + i).values().iterator())
+      case i => Dimension(name,db.treeMap[Int,String]("inversed_index_" + i).values().iterator())
     }
   }
 }

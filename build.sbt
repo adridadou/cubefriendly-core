@@ -24,6 +24,8 @@ timingFormat := {
   DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
 }
 
+scalacOptions ++= Seq("-unchecked", "-deprecation")
+
 libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-reflect" % "2.11.6",
   "org.scala-lang" % "scala-compiler" % "2.11.6",
