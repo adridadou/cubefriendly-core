@@ -13,13 +13,13 @@ import org.specs2.mutable._
  */
 class CubeDataSpec extends Specification  {
 
-  def db():DB = DBMaker.newTempFileDB().make()
+  def db():DB = DBMaker.tempFileDB().make()
 
   "A Cube data builder" should {
 
     "get a name to identify the cube we're creating" in {
       val cubeName = "test_cube"
-      val actual:Cube = Cube.builder(db()).toCube(cubeName)
+      val actual:Cube = Cube.builder(db()).name(cubeName).toCube
 
       actual.name must be equalTo cubeName
     }
@@ -27,7 +27,7 @@ class CubeDataSpec extends Specification  {
     "set a header " in {
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
-      val actual:Cube = Cube.builder(db()).header(header).toCube(cubeName)
+      val actual:Cube = Cube.builder(db()).header(header).name(cubeName).toCube
 
       actual.header must contain(exactly("year","country","debt"))
     }
@@ -35,7 +35,7 @@ class CubeDataSpec extends Specification  {
     "add a record" in {
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
-      val actual:Cube = Cube.builder(db()).header(header).record(Vector("1990","Switzerland","30000000")).toCube(cubeName)
+      val actual:Cube = Cube.builder(db()).header(header).record(Vector("1990","Switzerland","30000000")).name(cubeName).toCube
 
       actual.header must contain(exactly("year","country","debt"))
 
@@ -52,7 +52,8 @@ class CubeDataSpec extends Specification  {
         .record(Vector("1995","France","30000000"))
         .record(Vector("1995","France","3000000"))
         .record(Vector("1990","Switzerland","3000000"))
-        .toCube(cubeName)
+        .name(cubeName)
+        .toCube
 
       actual.header must contain(exactly("year","country","debt"))
 
@@ -69,7 +70,8 @@ class CubeDataSpec extends Specification  {
         .record(Vector("1995","France","30000000"))
         .record(Vector("1995","France","3000000"))
         .record(Vector("1990","Switzerland","3000000"))
-        .toCube(cubeName)
+        .name(cubeName)
+        .toCube
 
       val actual = QueryBuilder.query(cube).where(Map(
         "country" -> Vector("Switzerland")
@@ -86,7 +88,8 @@ class CubeDataSpec extends Specification  {
         .record(Vector("1995","France","30000000"))
         .record(Vector("1995","France","3000000"))
         .record(Vector("1990","Switzerland","3000000"))
-        .toCube(cubeName)
+        .name(cubeName)
+        .toCube
 
       val actual = QueryBuilder.query(cube).where(
         "country" -> Vector("Switzerland"),
@@ -105,7 +108,8 @@ class CubeDataSpec extends Specification  {
         .record(Vector("1995","France","30000000"))
         .record(Vector("1995","France","3000000"))
         .record(Vector("1990","Switzerland","3000000"))
-        .toCube(cubeName)
+        .name(cubeName)
+        .toCube
 
       val actual = QueryBuilder.query(cube).where(
         "country" -> Vector("Switzerland"),
@@ -124,7 +128,8 @@ class CubeDataSpec extends Specification  {
         .record(Vector("1990","France","30000000"))
         .record(Vector("1990","France","3000000"))
         .record(Vector("1990","Switzerland","3000000"))
-        .toCube(cubeName)
+        .name(cubeName)
+        .toCube
 
       val actual = QueryBuilder.query(cube).where(
         "year" -> Vector("1990")
@@ -137,7 +142,7 @@ class CubeDataSpec extends Specification  {
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
       val file = File.createTempFile("test","cube")
-      val actual:Cube = Cube.builder(DBMaker.newFileDB(file).make()).header(header).record(Vector("1990","Switzerland","30000000")).toCube(cubeName)
+      val actual:Cube = Cube.builder(DBMaker.fileDB(file).make()).header(header).record(Vector("1990","Switzerland","30000000")).name(cubeName).toCube
 
       actual.header must contain(exactly("year","country","debt"))
 
