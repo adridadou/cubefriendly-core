@@ -3,7 +3,6 @@ package org.cubefriendly.processors
 import java.io.File
 
 import org.cubefriendly.data.Cube
-import org.mapdb.DB
 import scaldi.Module
 
 /**
@@ -13,7 +12,7 @@ import scaldi.Module
 trait DataProcessor {
   def header():DataHeader
 
-  def process(config: CubeConfig, db: DB): Cube
+  def process(config: CubeConfig, db: File): Cube
 }
 
 trait DataHeader {

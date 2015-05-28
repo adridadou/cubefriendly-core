@@ -4,7 +4,6 @@ import java.io.File
 
 import org.cubefriendly.data.{Cube, QueryBuilder}
 import org.cubefriendly.reflection.Aggregator
-import org.mapdb.{DB, DBMaker}
 import org.specs2.mutable._
 
 /**
@@ -13,7 +12,7 @@ import org.specs2.mutable._
  */
 class CubeDataSpec extends Specification  {
 
-  def db():DB = DBMaker.tempFileDB().make()
+  def db(): File = File.createTempFile("cube", "friendly")
 
   "A Cube data builder" should {
 
@@ -142,7 +141,7 @@ class CubeDataSpec extends Specification  {
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
       val file = File.createTempFile("test","cube")
-      val actual:Cube = Cube.builder(DBMaker.fileDB(file).make()).header(header).record(Vector("1990","Switzerland","30000000")).name(cubeName).toCube
+      val actual: Cube = Cube.builder(file).header(header).record(Vector("1990", "Switzerland", "30000000")).name(cubeName).toCube
 
       actual.header must contain(exactly("year","country","debt"))
 

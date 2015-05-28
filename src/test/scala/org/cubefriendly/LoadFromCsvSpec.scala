@@ -4,7 +4,6 @@ import java.io.File
 
 import org.cubefriendly.data.Cube
 import org.cubefriendly.processors.{CubeConfig, DataProcessorProvider, DataProcessorProviderImpl}
-import org.mapdb.{DB, DBMaker}
 import org.specs2.mutable.Specification
 
 /**
@@ -13,7 +12,7 @@ import org.specs2.mutable.Specification
  */
 class LoadFromCsvSpec extends Specification {
   "A Cube data" should {
-    def db(): DB = DBMaker.tempFileDB().make()
+    def db(): File = File.createTempFile("cube", "friendly")
 
     "be loaded from CSV" in {
       val cubeName = "test_cube"
@@ -31,7 +30,6 @@ class LoadFromCsvSpec extends Specification {
             "Geographical Barriers Sub-domain Score", "Wider Barriers Sub-domain Score",
             "Children/Young People Sub-domain Score", "Skills Sub-domain Score")))
       actual.name must be equalTo cubeName
-      mapdb.close()
       success
     }
   }

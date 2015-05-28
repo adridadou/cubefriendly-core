@@ -4,7 +4,6 @@ import java.io.File
 
 import org.cubefriendly.CubefriendlyException
 import org.cubefriendly.data.Cube
-import org.mapdb.DB
 
 import scala.io.Source
 
@@ -13,7 +12,7 @@ import scala.io.Source
  * Created by david on 11.04.15.
  */
 class CsvProcessor(val lines: Iterator[String], val header: CsvHeader) extends DataProcessor {
-  override def process(config: CubeConfig, db: DB): Cube = {
+  override def process(config: CubeConfig, db: File): Cube = {
     val builder = Cube.builder(db).header(lines.next().split(header.separator).toVector).metrics(config.metrics: _*)
     lines.filter(_.nonEmpty).foreach(line => builder.record(line.split(header.separator).toVector))
     builder.name(config.name).toCube

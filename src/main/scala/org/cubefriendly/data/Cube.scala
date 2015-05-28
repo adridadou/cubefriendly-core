@@ -17,16 +17,21 @@ import scala.collection.mutable
 
 object Cube {
 
-  def builder(db:DB) : CubeBuilder = new CubeBuilder(db, CubeData.builder(db))
+  def builder(file: File): CubeBuilder = {
+    val db = createDb(file)
+    new CubeBuilder(db, CubeData.builder(db))
+  }
 
   def open(file:File):Cube = {
-    val db = DBMaker.fileDB(file).compressionEnable().make()
+    val db = createDb(file)
 
     val metaString = db.treeMap[String,String]("meta_string")
     val metaVecString = db.treeMap[String,Vector[String]]("meta_vec_string")
 
     Cube(metaString.get("name"),metaVecString.get("header"),metaVecString.get("metrics"),db,CubeData.builder(db).build())
   }
+
+  private def createDb(file: File): DB = DBMaker.fileDB(file).compressionEnable().transactionDisable().make()
 }
 
 class QueryBuilder(val cube:Cube) {
