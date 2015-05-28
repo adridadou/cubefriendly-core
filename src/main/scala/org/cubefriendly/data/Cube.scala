@@ -5,7 +5,7 @@ import java.io.File
 import org.cubefriendly.CubefriendlyException
 import org.cubefriendly.engine.cube.CubeData
 import org.cubefriendly.reflection.Aggregator
-import org.mapdb.{DBMaker, DB}
+import org.mapdb.{DB, DBMaker}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -20,7 +20,7 @@ object Cube {
   def builder(db:DB) : CubeBuilder = new CubeBuilder(db, CubeData.builder(db))
 
   def open(file:File):Cube = {
-    val db = DBMaker.fileDB(file).make()
+    val db = DBMaker.fileDB(file).compressionEnable().make()
 
     val metaString = db.treeMap[String,String]("meta_string")
     val metaVecString = db.treeMap[String,Vector[String]]("meta_vec_string")
@@ -60,7 +60,7 @@ class QueryBuilder(val cube:Cube) {
   }
   private def validateAggregation() = {
     if(groupByValues.size + reduceValues.size > 0){
-      val setMoreThanOnce = (0 until cube.header.size).filter(h => groupByValues.contains(h) && reduceValues.keys.contains(h))
+      val setMoreThanOnce = cube.header.indices.filter(h => groupByValues.contains(h) && reduceValues.keys.contains(h))
 
       if(setMoreThanOnce.nonEmpty){
         throw new CubefriendlyException("you cannot set a dimension for group by and reduce at the same time:" + setMoreThanOnce)
@@ -84,7 +84,7 @@ class QueryBuilder(val cube:Cube) {
       })
     })
     aggregatedResult.map({case(key,(dims,metrics)) =>
-      ((0 until cube.header.length).filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
+      (cube.header.indices.filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
         if(groupByValues.contains(idx)){
           key.find({case(index,_) => index == idx}) match {
             case Some((i,v)) => v
@@ -94,7 +94,7 @@ class QueryBuilder(val cube:Cube) {
           dims(idx).finish
         }
       ).toVector,
-      (0 until cube.metrics.length).map(idx =>
+        cube.metrics.indices.map(idx =>
         metrics(idx).finish
       ).toVector)
     }).toIterator
