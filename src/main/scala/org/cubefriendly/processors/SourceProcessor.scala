@@ -10,14 +10,12 @@ import scaldi.Module
  * Created by david on 11.04.15.
  */
 trait DataProcessor {
-  def header():DataHeader
+  def header(): SourceDataHeader
 
   def process(config: CubeConfig, db: File): Cube
 }
 
-trait DataHeader {
-  def dimensions:Seq[String]
-}
+case class SourceDataHeader(dimensions: Seq[String])
 
 trait DataProcessorProvider {
   def forSource(file: File): DataProcessor

@@ -11,14 +11,14 @@ import scala.io.Source
  * Cubefriendly
  * Created by david on 11.04.15.
  */
-class CsvProcessor(val lines: Iterator[String], val header: CsvHeader) extends DataProcessor {
+class CsvProcessor(val lines: Iterator[String], val csvHeader: CsvHeader) extends DataProcessor {
+  lazy val header: SourceDataHeader = csvHeader.dataHeader
   override def process(config: CubeConfig, db: File): Cube = {
-    val builder = Cube.builder(db).header(lines.next().split(header.separator).toVector).metrics(config.metrics: _*)
-    lines.filter(_.nonEmpty).foreach(line => builder.record(line.split(header.separator).toVector))
+    val builder = Cube.builder(db).header(lines.next().split(csvHeader.separator).toVector).metrics(config.metrics: _*)
+    lines.filter(_.nonEmpty).foreach(line => builder.record(line.split(csvHeader.separator).toVector))
     builder.name(config.name).toCube
   }
 }
-
 
 object CsvProcessor {
 
@@ -43,8 +43,8 @@ object CsvProcessor {
       case r => CsvHeader(r.head,headerResult(r.head))
     }
   }
-
-
 }
 
-case class CsvHeader(separator:String, dimensions:Seq[String]) extends DataHeader
+case class CsvHeader(separator: String, dimensions: Seq[String]) {
+  lazy val dataHeader: SourceDataHeader = SourceDataHeader(dimensions)
+}

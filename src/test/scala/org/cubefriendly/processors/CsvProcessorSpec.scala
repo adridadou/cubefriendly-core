@@ -13,9 +13,9 @@ class CsvProcessorSpec extends Specification {
     "read the header" in {
       val csvFile = new File("src/test/resources/banklist.csv")
       val processor:CsvProcessor = CsvProcessor(file = csvFile)
-      val header = processor.header
+      val header = processor.csvHeader
       header.separator must be(",")
-      header.dimensions must contain(exactly("Bank Name","City","ST","CERT","Acquiring Institution","Closing Date","Updated Date"))
+      processor.header.dimensions must contain(exactly("Bank Name", "City", "ST", "CERT", "Acquiring Institution", "Closing Date", "Updated Date"))
     }
   }
 }
