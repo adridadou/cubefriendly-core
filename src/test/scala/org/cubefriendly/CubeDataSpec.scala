@@ -38,9 +38,9 @@ class CubeDataSpec extends Specification  {
 
       actual.header must contain(exactly("year","country","debt"))
 
-      actual.dimensions("year").values must contain(exactly("1990"))
-      actual.dimensions("country").values must contain(exactly("Switzerland"))
-      actual.dimensions("debt").values must contain(exactly("30000000"))
+      actual.dimension("year").values must contain(exactly("1990"))
+      actual.dimension("country").values must contain(exactly("Switzerland"))
+      actual.dimension("debt").values must contain(exactly("30000000"))
     }
 
     "add a values only if it does not exist already" in {
@@ -56,9 +56,9 @@ class CubeDataSpec extends Specification  {
 
       actual.header must contain(exactly("year","country","debt"))
 
-      actual.dimensions("year").values must contain(exactly("1990","1995"))
-      actual.dimensions("country").values must contain(exactly("Switzerland","France"))
-      actual.dimensions("debt").values must contain(exactly("30000000","3000000"))
+      actual.dimension("year").values must contain(exactly("1990", "1995"))
+      actual.dimension("country").values must contain(exactly("Switzerland", "France"))
+      actual.dimension("debt").values must contain(exactly("30000000", "3000000"))
     }
 
     "query the values" in {
@@ -145,9 +145,9 @@ class CubeDataSpec extends Specification  {
 
       actual.header must contain(exactly("year","country","debt"))
 
-      actual.dimensions("year").values must contain(exactly("1990"))
-      actual.dimensions("country").values must contain(exactly("Switzerland"))
-      actual.dimensions("debt").values must contain(exactly("30000000"))
+      actual.dimension("year").values must contain(exactly("1990"))
+      actual.dimension("country").values must contain(exactly("Switzerland"))
+      actual.dimension("debt").values must contain(exactly("30000000"))
 
       actual.close()
 
@@ -155,9 +155,9 @@ class CubeDataSpec extends Specification  {
 
       reopen.header must contain(exactly("year","country","debt"))
 
-      reopen.dimensions("year").values must contain(exactly("1990"))
-      reopen.dimensions("country").values must contain(exactly("Switzerland"))
-      reopen.dimensions("debt").values must contain(exactly("30000000"))
+      reopen.dimension("year").values must contain(exactly("1990"))
+      reopen.dimension("country").values must contain(exactly("Switzerland"))
+      reopen.dimension("debt").values must contain(exactly("30000000"))
     }
 
   }

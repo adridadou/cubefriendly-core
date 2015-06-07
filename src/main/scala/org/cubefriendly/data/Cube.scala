@@ -179,7 +179,7 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
 
   def close(): Unit = internal.close()
 
-  def dimensions(name: String):Dimension = {
+  def dimension(name: String): Dimension = {
     header().indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name)
       case i =>

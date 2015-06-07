@@ -26,11 +26,16 @@ timingFormat := {
 
 scalacOptions ++= Seq("-unchecked", "-deprecation")
 
-libraryDependencies ++= Seq(
-  "org.scala-lang" % "scala-reflect" % "2.11.6",
-  "org.scala-lang" % "scala-compiler" % "2.11.6",
-  "org.scaldi" %% "scaldi" % "0.5.4",
-  "org.cubefriendly" % "cube-engine" % "0.1-SNAPSHOT",
-  "com.typesafe.akka" %% "akka-actor" % "2.3.9",
-  "com.typesafe.akka" %% "akka-testkit" % "2.3.9" % "test",
-  "org.specs2" %% "specs2-core" % "2.4.15" % "test")
+libraryDependencies ++= {
+  val akkaV = "2.3.11"
+  val akkaStreamV = "1.0-RC2"
+  Seq(
+    "org.scala-lang" % "scala-reflect" % "2.11.6",
+    "org.scala-lang" % "scala-compiler" % "2.11.6",
+    "org.scaldi" %% "scaldi" % "0.5.4",
+    "org.cubefriendly" % "cube-engine" % "0.1-SNAPSHOT",
+    "com.typesafe.akka" %% "akka-actor" % akkaV,
+    "com.typesafe.akka" %% "akka-testkit" % akkaV % "test",
+    "com.typesafe.akka" %% "akka-stream-experimental" % akkaStreamV,
+    "org.specs2" %% "specs2-core" % "2.4.15" % "test")
+}

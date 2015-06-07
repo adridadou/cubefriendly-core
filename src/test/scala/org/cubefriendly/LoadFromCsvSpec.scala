@@ -3,8 +3,11 @@ package org.cubefriendly
 import java.io.File
 
 import org.cubefriendly.data.Cube
-import org.cubefriendly.processors.{CubeConfig, DataProcessorProvider, DataProcessorProviderImpl}
+import org.cubefriendly.processors.{DataProcessorProvider, DataProcessorProviderImpl}
 import org.specs2.mutable.Specification
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
  * Cubefriendly
@@ -16,20 +19,12 @@ class LoadFromCsvSpec extends Specification {
 
     "be loaded from CSV" in {
       val cubeName = "test_cube"
-      val mapdb = db()
       val provider: DataProcessorProvider = new DataProcessorProviderImpl()
-      val csvFile = new File("src/test/resources/test.csv")
-      val actual: Cube = provider.forSource(file = csvFile).process(
-        db = mapdb,
-        config = CubeConfig(
-          name = cubeName,
-          metrics = Seq("IMD SCORE", "INCOME SCORE", "EMPLOYMENT SCORE",
-            "HEALTH DEPRIVATION AND DISABILITY SCORE", "EDUCATION SKILLS AND TRAINING SCORE",
-            "BARRIERS TO HOUSING AND SERVICES SCORE", "CRIME AND DISORDER SCORE",
-            "LIVING ENVIRONMENT SCORE", "Indoors Sub-domain Score", "Outdoors Sub-domain Score",
-            "Geographical Barriers Sub-domain Score", "Wider Barriers Sub-domain Score",
-            "Children/Young People Sub-domain Score", "Skills Sub-domain Score")))
+      val csvFile = new File("src/test/resources/banklist.csv")
+      val actual: Cube = Await.result(provider.process(name = cubeName, source = csvFile, dest = db()), Duration.Inf)
+      val header = actual.header()
       actual.name must be equalTo cubeName
+      header must contain(exactly("Bank Name", "City", "ST", "CERT", "Acquiring Institution", "Closing Date", "Updated Date"))
       success
     }
   }
