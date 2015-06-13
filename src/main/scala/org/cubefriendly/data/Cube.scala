@@ -63,9 +63,9 @@ trait DataInternals {
 case class MapDbInternal(db: DB) extends DataInternals {
   def getMap[K, V](t: MapType): mutable.Map[K, V] = db.treeMap[K, V](t.name)
 
-  def commit() = db.commit()
+  def commit(): Unit = db.commit()
 
-  def close() = db.close()
+  def close(): Unit = db.close()
 }
 
 class QueryBuilder(val cube:Cube) {

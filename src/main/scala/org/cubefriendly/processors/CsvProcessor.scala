@@ -13,7 +13,7 @@ import scala.collection.mutable
  */
 
 
-sealed trait CsvStreamState {
+abstract sealed class CsvStreamState {
   def builder: mutable.StringBuilder
 }
 
@@ -75,6 +75,8 @@ class CsvProcessor(db: File) extends DataProcessor {
     }
   }
 
+  private def clean(s: Vector[String]): Vector[String] = s.map(_.trim())
+
   private def fsm(s: CsvReadRest): CsvStreamState = {
     val line = s.builder.toString()
     if (line.nonEmpty) {
@@ -82,8 +84,6 @@ class CsvProcessor(db: File) extends DataProcessor {
     }
     CsvReadRest(s.header, s.cubeBuilder, mutable.StringBuilder.newBuilder)
   }
-
-  private def clean(s: Vector[String]): Vector[String] = s.map(_.trim())
 
   def name(name: String): CsvProcessor = {
     cubeName = name

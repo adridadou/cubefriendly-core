@@ -60,5 +60,5 @@ class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
     cube
   }
 
-  def meta(key: MetaListType, value: Vector[String]) = internal.map(MetaList).put(key.name, value)
+  def meta(key: MetaListType, value: Vector[String]): Unit = internal.map(MetaList).put(key.name, value)
 }
