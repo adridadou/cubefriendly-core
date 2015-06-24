@@ -6,8 +6,8 @@
 
 Cubefriendly core library
 
-Cubefriendly-core is Cubefriendly's engine.
+You can use cubefriendly-core as a library to embed it into your application.
 
-Please go to https://github.com/cubefriendly/cubefriendly-studio if you are looking for the application.
+If you are looking for the standalone application, please go to https://github.com/cubefriendly/cubefriendly-studio if you are looking for the application.
 
 Documentation will come in the Wiki
