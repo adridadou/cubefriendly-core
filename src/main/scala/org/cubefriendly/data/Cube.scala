@@ -55,6 +55,8 @@ trait DataInternals {
 
   def getMap[K, V](t: MapType): mutable.Map[K, V]
 
+  def deleteMap(t:MapType):Unit
+
   def commit(): Unit
 
   def close(): Unit
@@ -62,6 +64,8 @@ trait DataInternals {
 
 case class MapDbInternal(db: DB) extends DataInternals {
   def getMap[K, V](t: MapType): mutable.Map[K, V] = db.treeMap[K, V](t.name)
+
+  def deleteMap(t:MapType):Unit = db.delete(t.name)
 
   def commit(): Unit = db.commit()
 
@@ -178,6 +182,23 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
   def meta(key: MetaListType): Vector[String] = metaVecString(key.name)
 
   def close(): Unit = internal.close()
+
+  def toMetric(dimension:String):Cube = {
+
+    println(dimension)
+
+    header().indexOf(dimension) match {
+      case -1 => this
+      case i =>
+        cubeData.toMetric(i)
+        internal.deleteMap(Index(i))
+        internal.deleteMap(IndexInv(i))
+        metaVecString.put("header",header().filter(h => h != dimension))
+        metaVecString.put("metrics",metrics() ++ Vector(dimension))
+        internal.commit()
+        this
+    }
+  }
 
   def dimension(name: String): Dimension = {
     header().indexOf(name) match {
