@@ -9,10 +9,11 @@ import scala.collection.mutable
 /**
  * Cubefriendly
  * Created by david on 23.02.15.
+ * This code is released under Apache 2 license
  */
 class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
 
-  private val header:mutable.Buffer[String] = mutable.Buffer()
+  private val dimensions:mutable.Buffer[String] = mutable.Buffer()
   private val metrics:mutable.Buffer[String] = mutable.Buffer()
   private val dimSize:mutable.HashMap[String,Int] = mutable.HashMap()
 
@@ -29,7 +30,7 @@ class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
   def meta(key: MetaType, value: String): Unit = internal.map(Meta).put(key.name, value)
 
   def record(record: Vector[String]):CubeBuilder = {
-    val vector: Vector[Integer] = header.filter(dim => !metrics.contains(dim)).zipWithIndex.map({ case (dim, index) =>
+    val vector: Vector[Integer] = dimensions.filter(dim => !metrics.contains(dim)).zipWithIndex.map({ case (dim, index) =>
       val indexed = internal.map(Index(index))
 
       if(!indexed.containsKey(record(index))){
@@ -46,15 +47,15 @@ class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
     this
   }
 
-  def header(header:Vector[String]):CubeBuilder = {
-    this.header.clear()
-    this.header.append(header :_*)
+  def dimensions(header:Vector[String]):CubeBuilder = {
+    this.dimensions.clear()
+    this.dimensions.append(header :_*)
     this
   }
 
   def toCube:Cube = {
     val cube = Cube(internal, cubeDataBuilder.build())
-    meta(MetaHeader, header.toVector)
+    meta(MetaDimensions, dimensions.toVector)
     meta(MetaMetrics, metrics.toVector)
     internal.commit()
     cube

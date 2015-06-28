@@ -13,6 +13,7 @@ import scala.collection.mutable
 /**
  * Cubefriendly
  * Created by david on 23.02.15.
+ * This code is released under Apache 2 license
  */
 
 object Cube {
@@ -89,13 +90,13 @@ class QueryBuilder(val cube:Cube) {
   }
 
   def groupBy(dimensions:String*): QueryBuilder = {
-    dimensions.foreach(dim => groupByValues.append(cube.header().indexOf(dim)))
+    dimensions.foreach(dim => groupByValues.append(cube.dimensions().indexOf(dim)))
     this
   }
 
   def reduce(by: (String, String)*): QueryBuilder = {
     by.foreach({
-      case (key, value) if cube.header().indexOf(key) > -1 => reduceValues.put(cube.header().indexOf(key), value)
+      case (key, value) if cube.dimensions().indexOf(key) > -1 => reduceValues.put(cube.dimensions().indexOf(key), value)
       case (key, value) if cube.metrics().indexOf(key) > -1 => reduceMetrics.put(cube.metrics().indexOf(key), value)
       case (key,value) => throw new CubefriendlyException("dimension / metric not found \"" + key + "\"")
     })
@@ -103,7 +104,7 @@ class QueryBuilder(val cube:Cube) {
   }
   private def validateAggregation() = {
     if(groupByValues.size + reduceValues.size > 0){
-      val setMoreThanOnce = cube.header().indices.filter(h => groupByValues.contains(h) && reduceValues.keys.contains(h))
+      val setMoreThanOnce = cube.dimensions().indices.filter(h => groupByValues.contains(h) && reduceValues.keys.contains(h))
 
       if(setMoreThanOnce.nonEmpty){
         throw new CubefriendlyException("you cannot set a dimension for group by and reduce at the same time:" + setMoreThanOnce)
@@ -127,7 +128,7 @@ class QueryBuilder(val cube:Cube) {
       })
     })
     aggregatedResult.map({case(key,(dims,metrics)) =>
-      (cube.header().indices.filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
+      (cube.dimensions().indices.filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
         if (groupByValues.contains(idx)) {
           key.find({case(index,_) => index == idx}) match {
             case Some((i,v)) => v
@@ -147,7 +148,7 @@ class QueryBuilder(val cube:Cube) {
     validateAggregation()
 
     val q = selectedValues.map({ case (key, values) =>
-      val index: Integer = cube.header().indexOf(key)
+      val index: Integer = cube.dimensions().indexOf(key)
       val idx = cube.internal.map(Index(index))
       index -> seqAsJavaList(values.map(idx.apply).toSeq)
     }).toMap
@@ -171,7 +172,7 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
   private lazy val metaString = internal.map(Meta)
   private lazy val metaVecString = internal.map(MetaList)
 
-  def header(): Vector[String] = metaVecString("header")
+  def dimensions(): Vector[String] = metaVecString("dimensions")
 
   def metrics(): Vector[String] = metaVecString("metrics")
 
@@ -184,29 +185,26 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
   def close(): Unit = internal.close()
 
   def toMetric(dimension:String):Cube = {
-
-    println(dimension)
-
-    header().indexOf(dimension) match {
+    dimensions().indexOf(dimension) match {
       case -1 => this
       case i =>
         cubeData.toMetric(i)
         internal.deleteMap(Index(i))
         internal.deleteMap(IndexInv(i))
-        metaVecString.put("header",header().filter(h => h != dimension))
-        metaVecString.put("metrics",metrics() ++ Vector(dimension))
+        metaVecString.put(MetaDimensions.name,dimensions().filter(h => h != dimension))
+        metaVecString.put(MetaMetrics.name,metrics() ++ Vector(dimension))
         internal.commit()
         this
     }
   }
 
   def dimension(name: String): Dimension = {
-    header().indexOf(name) match {
+    dimensions().indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name)
       case i =>
         val values = internal.map(IndexInv(i))
-        val it = (1 to values.size).iterator.map(index => values(index))
-        Dimension(name, it)
+        val vec = (1 to values.size).map(index => values(index)).toVector
+        Dimension(name, vec)
     }
   }
 }
@@ -217,9 +215,9 @@ case object MetaName extends MetaType("name")
 
 abstract sealed class MetaListType(val name: String)
 
-case object MetaHeader extends MetaListType("header")
+case object MetaDimensions extends MetaListType("dimensions")
 
 case object MetaMetrics extends MetaListType("metrics")
 
-case class Dimension(name:String, values:Iterator[String])
+case class Dimension(name:String, values:Vector[String])
 

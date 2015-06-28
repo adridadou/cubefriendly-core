@@ -4,7 +4,7 @@ import java.io.File
 
 import akka.actor.ActorSystem
 import akka.stream.io.SynchronousFileSource
-import akka.stream.{ActorFlowMaterializer, FlowMaterializer}
+import akka.stream.{ActorMaterializer, Materializer}
 import org.cubefriendly.data.Cube
 import scaldi.Module
 
@@ -12,7 +12,8 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 
 /**
  * Cubefriendly
- * Created by david on 11.04.15.
+ * Created by david on 11.04.15
+ * This code is released under Apache 2 license
  */
 
 trait DataProcessor {
@@ -25,7 +26,7 @@ case class SourceDataHeader(dimensions: Seq[String])
 
 trait DataProcessorProvider {
   implicit val system: ActorSystem
-  implicit val materializer: FlowMaterializer
+  implicit val materializer: Materializer
 
   implicit def executor: ExecutionContextExecutor
 
@@ -39,7 +40,7 @@ class DataProcessorModule extends Module {
 class DataProcessorProviderImpl extends DataProcessorProvider {
   override implicit val system: ActorSystem = ActorSystem()
   override implicit val executor: ExecutionContextExecutor = system.dispatcher
-  override implicit val materializer: FlowMaterializer = ActorFlowMaterializer()
+  override implicit val materializer: Materializer = ActorMaterializer()
 
   override def process(name: String, source: File, dest: File): Future[Cube] = {
     val processor = new CsvProcessor(dest).name(name)

@@ -9,6 +9,7 @@ import org.specs2.mutable._
 /**
  * Cubefriendly
  * Created by david on 23.02.15.
+ * This code is released under Apache 2 license
  */
 class CubeDataSpec extends Specification  {
 
@@ -26,17 +27,17 @@ class CubeDataSpec extends Specification  {
     "set a header " in {
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
-      val actual:Cube = Cube.builder(db()).header(header).name(cubeName).toCube
+      val actual:Cube = Cube.builder(db()).dimensions(header).name(cubeName).toCube
 
-      actual.header must contain(exactly("year","country","debt"))
+      actual.dimensions() must contain(exactly("year","country","debt"))
     }
 
     "add a record" in {
       val cubeName = "test_cube"
-      val header = Vector("year","country","debt")
-      val actual:Cube = Cube.builder(db()).header(header).record(Vector("1990","Switzerland","30000000")).name(cubeName).toCube
+      val dimensions = Vector("year","country","debt")
+      val actual:Cube = Cube.builder(db()).dimensions(dimensions).record(Vector("1990","Switzerland","30000000")).name(cubeName).toCube
 
-      actual.header must contain(exactly("year","country","debt"))
+      actual.dimensions() must contain(exactly("year","country","debt"))
 
       actual.dimension("year").values must contain(exactly("1990"))
       actual.dimension("country").values must contain(exactly("Switzerland"))
@@ -45,8 +46,8 @@ class CubeDataSpec extends Specification  {
 
     "add a values only if it does not exist already" in {
       val cubeName = "test_cube"
-      val header = Vector("year","country","debt")
-      val actual:Cube = Cube.builder(db()).header(header)
+      val dimensions = Vector("year","country","debt")
+      val actual:Cube = Cube.builder(db()).dimensions(dimensions)
         .record(Vector("1990","Switzerland","30000000"))
         .record(Vector("1995","France","30000000"))
         .record(Vector("1995","France","3000000"))
@@ -54,7 +55,7 @@ class CubeDataSpec extends Specification  {
         .name(cubeName)
         .toCube
 
-      actual.header must contain(exactly("year","country","debt"))
+      actual.dimensions() must contain(exactly("year","country","debt"))
 
       actual.dimension("year").values must contain(exactly("1990", "1995"))
       actual.dimension("country").values must contain(exactly("Switzerland", "France"))
@@ -64,7 +65,7 @@ class CubeDataSpec extends Specification  {
     "query the values" in {
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
-      val cube:Cube = Cube.builder(db()).header(header)
+      val cube:Cube = Cube.builder(db()).dimensions(header)
         .record(Vector("1990","Switzerland","30000000"))
         .record(Vector("1995","France","30000000"))
         .record(Vector("1995","France","3000000"))
@@ -82,7 +83,7 @@ class CubeDataSpec extends Specification  {
     "query the values with no map" in {
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
-      val cube:Cube = Cube.builder(db()).header(header)
+      val cube:Cube = Cube.builder(db()).dimensions(header)
         .record(Vector("1990","Switzerland","30000000"))
         .record(Vector("1995","France","30000000"))
         .record(Vector("1995","France","3000000"))
@@ -102,7 +103,7 @@ class CubeDataSpec extends Specification  {
       Aggregator.registerSum()
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
-      val cube:Cube = Cube.builder(db()).header(header)
+      val cube:Cube = Cube.builder(db()).dimensions(header)
         .record(Vector("1990","Switzerland","30000000"))
         .record(Vector("1995","France","30000000"))
         .record(Vector("1995","France","3000000"))
@@ -122,7 +123,7 @@ class CubeDataSpec extends Specification  {
       Aggregator.registerSum()
       val cubeName = "test_cube"
       val header = Vector("year","country","debt")
-      val cube:Cube = Cube.builder(db()).header(header)
+      val cube:Cube = Cube.builder(db()).dimensions(header)
         .record(Vector("1990","Switzerland","30000000"))
         .record(Vector("1990","France","30000000"))
         .record(Vector("1990","France","3000000"))
@@ -139,11 +140,11 @@ class CubeDataSpec extends Specification  {
 
     "open a cube that was previously created" in {
       val cubeName = "test_cube"
-      val header = Vector("year","country","debt")
+      val dimensions = Vector("year","country","debt")
       val file = File.createTempFile("test","cube")
-      val actual: Cube = Cube.builder(file).header(header).record(Vector("1990", "Switzerland", "30000000")).name(cubeName).toCube
+      val actual: Cube = Cube.builder(file).dimensions(dimensions).record(Vector("1990", "Switzerland", "30000000")).name(cubeName).toCube
 
-      actual.header must contain(exactly("year","country","debt"))
+      actual.dimensions() must contain(exactly("year","country","debt"))
 
       actual.dimension("year").values must contain(exactly("1990"))
       actual.dimension("country").values must contain(exactly("Switzerland"))
@@ -153,7 +154,7 @@ class CubeDataSpec extends Specification  {
 
       val reopen:Cube = Cube.open(file)
 
-      reopen.header must contain(exactly("year","country","debt"))
+      reopen.dimensions() must contain(exactly("year","country","debt"))
 
       reopen.dimension("year").values must contain(exactly("1990"))
       reopen.dimension("country").values must contain(exactly("Switzerland"))

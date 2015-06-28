@@ -4,7 +4,7 @@ version := "0.1-SNAPSHOT"
 
 organization := "org.cubefriendly"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 resolvers ++= Seq(
   "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository" ,
@@ -28,10 +28,10 @@ scalacOptions ++= Seq("-unchecked", "-deprecation")
 
 libraryDependencies ++= {
   val akkaV = "2.3.11"
-  val akkaStreamV = "1.0-RC2"
+  val akkaStreamV = "1.0-RC4"
   Seq(
-    "org.scala-lang" % "scala-reflect" % "2.11.6",
-    "org.scala-lang" % "scala-compiler" % "2.11.6",
+    "org.scala-lang" % "scala-reflect" % "2.11.7",
+    "org.scala-lang" % "scala-compiler" % "2.11.7",
     "org.scaldi" %% "scaldi" % "0.5.4",
     "org.cubefriendly" % "cube-engine" % "0.1-SNAPSHOT",
     "com.typesafe.akka" %% "akka-actor" % akkaV,

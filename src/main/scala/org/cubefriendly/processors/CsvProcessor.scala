@@ -10,6 +10,7 @@ import scala.collection.mutable
 /**
  * Cubefriendly
  * Created by david on 11.04.15.
+ * This code is released under Apache 2 license
  */
 
 
@@ -58,7 +59,7 @@ class CsvProcessor(db: File) extends DataProcessor {
   private def fsm(s: CsvReadSecondRow): CsvStreamState = {
     val cubeBuilder = Cube.builder(db)
     val header = buildHeader(s.first, s.builder.toString())
-    cubeBuilder.header(header.dimensions)
+    cubeBuilder.dimensions(header.dimensions)
     CsvReadRest(header, cubeBuilder, StringBuilder.newBuilder)
   }
 
