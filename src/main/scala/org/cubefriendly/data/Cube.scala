@@ -98,7 +98,7 @@ class QueryBuilder(val cube:Cube) {
     by.foreach({
       case (key, value) if cube.dimensions().indexOf(key) > -1 => reduceValues.put(cube.dimensions().indexOf(key), value)
       case (key, value) if cube.metrics().indexOf(key) > -1 => reduceMetrics.put(cube.metrics().indexOf(key), value)
-      case (key,value) => throw new CubefriendlyException("dimension / metric not found \"" + key + "\"")
+      case (key,value) => throw new CubefriendlyException("dimension not found \"" + key + "\"")
     })
     this
   }

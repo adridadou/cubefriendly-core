@@ -31,7 +31,7 @@ case class CsvReadSecondRow(first: String, builder: mutable.StringBuilder) exten
 case class CsvReadRest(header: CsvHeader, cubeBuilder: CubeBuilder, builder: mutable.StringBuilder) extends CsvStreamState
 
 class CsvProcessor(db: File) extends DataProcessor {
-  private val separators = Seq(",", ";", "\t")
+  private val separators = Seq(",", ";", "\t","|")
 
   private var state: CsvStreamState = CsvReadFirstRow(mutable.StringBuilder.newBuilder)
   private var cubeName: String = ""

@@ -28,7 +28,7 @@ scalacOptions ++= Seq("-unchecked", "-deprecation")
 
 libraryDependencies ++= {
   val akkaV = "2.3.11"
-  val akkaStreamV = "1.0-RC4"
+  val akkaStreamV = "1.0"
   Seq(
     "org.scala-lang" % "scala-reflect" % "2.11.7",
     "org.scala-lang" % "scala-compiler" % "2.11.7",
