@@ -118,12 +118,12 @@ class QueryBuilder(val cube:Cube) {
       val newKey = record.zipWithIndex.filter({case(elem,index) => groupByValues.contains(index)}).map({case (elem,index) => (index,record.get(index))})
       val (aggregationMap,aggregationMetricsMap) = aggregatedResult.getOrElseUpdate(newKey,(mutable.HashMap(),mutable.HashMap()))
       reduceValues.keys.foreach(idx =>{
-        val current:Aggregator = aggregationMap.getOrElseUpdate(idx,Aggregator.newFunc(reduceValues(idx)))
+        val current:Aggregator = aggregationMap.getOrElseUpdate(idx,Aggregator.funcs(reduceValues(idx)))
         current.reduce(record(idx))
       })
 
       reduceMetrics.keys.foreach(idx =>{
-        val current:Aggregator = aggregationMetricsMap.getOrElseUpdate(idx,Aggregator.newFunc(reduceMetrics.getOrElse(idx,"sum")))
+        val current:Aggregator = aggregationMetricsMap.getOrElseUpdate(idx,Aggregator.funcs(reduceMetrics.getOrElse(idx,"sum")))
         current.reduce(metrics(idx))
       })
     })
