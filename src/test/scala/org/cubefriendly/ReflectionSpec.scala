@@ -15,7 +15,7 @@ class ReflectionSpec extends Specification {
       val finish = "state.toString"
       val reduce = "{state += BigDecimal(value)\nthis}"
 
-      val aggregation:Aggregator = Aggregator.build(init,reduce,finish)
+      val aggregation:Aggregator = Aggregator.build(Aggregator.parse(init,reduce,finish))
       val result:Aggregator = Seq("1","2","3").foldLeft(aggregation)((sum,elem) => aggregation.reduce(elem))
       result.finish must beEqualTo("6")
     }
