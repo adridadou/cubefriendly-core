@@ -137,8 +137,10 @@ class PxProcessor(file:File) extends DataProcessor {
   private def readHeaderValue(c:Char, s:HeaderReaderNumberValue) : PxStreamState = {
     c match {
       case ';' =>
-        s.values += s.builder.toString
-        header += ((s.key,s.values.toVector))
+        if(s.builder.toString() != "0") {
+          s.values += s.builder.toString()
+          header += ((s.key,s.values.toVector))
+        }
         HeaderReader()
       case ',' =>
         s.values += s.builder.toString
@@ -271,14 +273,13 @@ class VectorIncrementer(values:Vector[Vector[String]]) extends Iterator[Array[St
     }
   }
 
-  def getVector :Array[Int] = for((i,j) <- vector.zipWithIndex) yield {
-    vector(j)
-  }
-
   def hasNext: Boolean = !end
 
   def next(): Array[String] = {
+    if(end) {
+      throw new CubefriendlyException("no more values!")
+    }
     inc()
-    for((i,p) <- getVector.zipWithIndex) yield values(i)(p)
+    for((p,i) <- vector.zipWithIndex) yield values(i)(p)
   }
 }
