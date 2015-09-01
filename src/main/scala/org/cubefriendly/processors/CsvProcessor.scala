@@ -19,9 +19,7 @@ abstract sealed class CsvStreamState {
 }
 
 object CsvProcessor {
-  def apply(file: File): CsvProcessor = {
-    new CsvProcessor(file)
-  }
+  def apply(file: File): CsvProcessor = new CsvProcessor(file)
 }
 
 case class CsvReadFirstRow(builder: mutable.StringBuilder) extends CsvStreamState
@@ -48,9 +46,6 @@ class CsvProcessor(db: File) extends DataProcessor {
         case s: CsvReadSecondRow => fsm(s)
         case s: CsvReadRest => fsm(s)
       }
-    //determine the separator
-    //build header
-
     case char: Char => state.builder.append(char)
   }
 
@@ -86,7 +81,7 @@ class CsvProcessor(db: File) extends DataProcessor {
     CsvReadRest(s.header, s.cubeBuilder, mutable.StringBuilder.newBuilder)
   }
 
-  def name(name: String): CsvProcessor = {
+  def name(name: String): DataProcessor = {
     cubeName = name
     this
   }

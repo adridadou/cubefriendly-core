@@ -4,6 +4,7 @@ import java.io.File
 
 import org.cubefriendly.CubefriendlyException
 import org.cubefriendly.engine.cube.CubeData
+import org.cubefriendly.processors.Language
 import org.cubefriendly.reflection.Aggregator
 import org.mapdb.{BTreeMap, DB, DBMaker}
 
@@ -174,13 +175,11 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
 
   def dimensions(): Vector[String] = metaVecString("dimensions")
 
+  def dimensions(lang:Language): Vector[String] = metaVecString("dimensions_" + lang.code)
+
   def metrics(): Vector[String] = metaVecString("metrics")
 
   def name(): String = metaString("name")
-
-  def meta(key: MetaType): String = metaString(key.name)
-
-  def meta(key: MetaListType): Vector[String] = metaVecString(key.name)
 
   def close(): Unit = internal.close()
 

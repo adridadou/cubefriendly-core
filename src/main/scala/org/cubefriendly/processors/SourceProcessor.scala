@@ -5,6 +5,7 @@ import java.io.File
 import akka.actor.ActorSystem
 import akka.stream.io.SynchronousFileSource
 import akka.stream.{ActorMaterializer, Materializer}
+import org.cubefriendly.CubefriendlyException
 import org.cubefriendly.data.Cube
 import scaldi.Module
 
@@ -17,7 +18,10 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
  */
 
 trait DataProcessor {
-  def process(buffer: Array[Char]): DataProcessor
+
+  def name(name:String): DataProcessor
+
+  def process(buffer: Array[Char]):DataProcessor
 
   def complete(): Cube
 }
@@ -31,6 +35,7 @@ trait DataProcessorProvider {
   implicit def executor: ExecutionContextExecutor
 
   def process(name: String, source: File, dest: File): Future[Cube]
+  def getProcessorByFilename(name:String, destination:File):DataProcessor
 }
 
 class DataProcessorModule extends Module {
@@ -43,10 +48,16 @@ class DataProcessorProviderImpl extends DataProcessorProvider {
   override implicit val materializer: Materializer = ActorMaterializer()
 
   override def process(name: String, source: File, dest: File): Future[Cube] = {
-    val processor = new CsvProcessor(dest).name(name)
+    val processor = getProcessorByFilename(source.getName,dest)
     SynchronousFileSource(source).runFold(processor)(
       (processor, a) => processor.process(a.decodeString("UTF-8").toCharArray)
     ).map(_.complete())
+  }
+
+  def getProcessorByFilename(n:String, dest:File):DataProcessor = n match {
+    case name if name.endsWith(".px") => new PxProcessor(dest).name(name)
+    case name if name.endsWith(".csv") => new CsvProcessor(dest).name(name)
+    case name => throw new CubefriendlyException("could not determine the file type of " + name)
   }
 
 }

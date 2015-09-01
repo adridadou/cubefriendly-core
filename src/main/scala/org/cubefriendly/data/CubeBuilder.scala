@@ -2,6 +2,7 @@ package org.cubefriendly.data
 
 
 import org.cubefriendly.engine.cube.CubeDataBuilder
+import org.cubefriendly.processors.Language
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -16,6 +17,9 @@ class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
   private val dimensions:mutable.Buffer[String] = mutable.Buffer()
   private val metrics:mutable.Buffer[String] = mutable.Buffer()
   private val dimSize:mutable.HashMap[String,Int] = mutable.HashMap()
+
+  private val langSpecificDimensions:mutable.Map[Language, Vector[String]] = new mutable.HashMap()
+  private val langSpecificValues:mutable.Map[Language,Map[String,Vector[String]]] = new mutable.HashMap()
 
   def metrics(metricList: String*):CubeBuilder = {
     metrics.appendAll(metricList)
@@ -50,6 +54,12 @@ class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
   def dimensions(header:Vector[String]):CubeBuilder = {
     this.dimensions.clear()
     this.dimensions.append(header :_*)
+    this
+  }
+
+  def dimensions(lang:Language, data:Map[String,Vector[String]]):CubeBuilder = {
+    this.langSpecificDimensions.put(lang,data.keys.toVector)
+    this.langSpecificValues.put(lang,data)
     this
   }
 
