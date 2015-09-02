@@ -25,7 +25,6 @@ object Cube {
 
   def open(file:File):Cube = {
     val db = createDb(file)
-
     Cube(MapDbInternal(db), CubeData.builder(db).build())
   }
 
@@ -33,7 +32,12 @@ object Cube {
 
   def map(db: DB, mapType: Index): BTreeMap[String, Integer] = db.treeMap[String, Integer](mapType.name)
 
-  private def createDb(file: File): DB = DBMaker.fileDB(file).compressionEnable().make()
+  private def createDb(file: File): DB = DBMaker.fileDB(file)
+    .compressionEnable()
+    .transactionDisable()
+    .asyncWriteEnable()
+    .fileMmapEnableIfSupported()
+    .make()
 }
 
 abstract sealed class MapType(val name: String)
