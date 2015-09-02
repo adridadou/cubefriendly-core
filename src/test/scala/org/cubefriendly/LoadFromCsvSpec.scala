@@ -19,7 +19,7 @@ class LoadFromCsvSpec extends Specification {
     def db(): File = File.createTempFile("cube", "friendly")
 
     "be loaded from CSV" in {
-      val cubeName = "test_cube"
+      val cubeName = "banklist.csv"
       val provider: DataProcessorProvider = new DataProcessorProviderImpl()
       val csvFile = new File("src/test/resources/banklist.csv")
       val actual: Cube = Await.result(provider.process(name = cubeName, source = csvFile, dest = db()), Duration.Inf)
