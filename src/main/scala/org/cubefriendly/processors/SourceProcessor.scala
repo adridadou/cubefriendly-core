@@ -50,7 +50,8 @@ class DataProcessorProviderImpl extends DataProcessorProvider {
   override def process(name: String, source: File, dest: File): Future[Cube] = {
     val processor = getProcessorByFilename(source.getName,dest)
     SynchronousFileSource(source).runFold(processor)(
-      (processor, a) => processor.process(a.decodeString("UTF-8").toCharArray)
+
+      (processor, a) => processor.process(a.decodeString("windows-1252").toCharArray)
     ).map(_.complete())
   }
 

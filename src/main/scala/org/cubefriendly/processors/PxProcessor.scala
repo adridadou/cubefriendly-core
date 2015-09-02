@@ -171,23 +171,29 @@ class PxProcessor(file:File) extends DataProcessor {
     val pxHeader:Map[String, Map[Language, mutable.Buffer[(Key,Vector[String])]]] = header.groupBy({case (key,values) => key.name}).mapValues(_.groupBy({case (key,values) => key.lang.getOrElse(defaultLang)}))
     val langs = pxHeader("LANGUAGES")(defaultLang).map({case (_,values) => values.map(Language.apply)}).head
 
-    langs.foreach(lang => {
-      val data = getDimensions(lang,pxHeader).map(dimension =>{
-        val values = pxHeader("VALUES")(lang).find({case (key,_) => key.dimension.getOrElse("") == dimension}).map({case (_,v) => v}).get
-        dimension -> (values ++ Vector("VALUE"))
-      }).toMap
-      cubeBuilder.dimensions(lang,data)
-    })
 
     val codesMap = pxHeader("CODES")(defaultLang)
       .map({case (key,values) => key.dimension.get -> values}).toMap
     val dimensions = getDimensions(defaultLang,pxHeader)
     cubeBuilder.dimensions(dimensions)
-    cubeBuilder.metrics("VALUES")
+
     val codes = dimensions.map(dimension => codesMap.get(dimension) match {
       case Some(values) => values
       case None => pxHeader("VALUES")(defaultLang).find({case (key,_) => key.dimension.get == dimension}).map({case (_,values) => values}).get.indices.map(_.toString).toVector
-    }) ++ Vector(Vector("0"))
+    })
+
+    cubeBuilder.prepareCodes(codes)
+
+    langs.foreach(lang => {
+      val dimensionsInLang = getDimensions(lang,pxHeader)
+      val data = dimensionsInLang.map(dimension =>{
+        pxHeader("VALUES")(lang).find({case (key,_) => key.dimension.getOrElse("") == dimension}).map({case (_,v) => v}).get
+      })
+      cubeBuilder.dimensions(lang,data)
+      cubeBuilder.dimensions(dimensionsInLang,lang)
+    })
+    cubeBuilder.metrics("VALUE")
+
     DataReader(cubeBuilder, getDimensions(defaultLang,pxHeader), new VectorIncrementer(codes))
   }
 
@@ -202,8 +208,8 @@ class PxProcessor(file:File) extends DataProcessor {
   private def addRecord(s:DataNumberReader):PxStreamState = {
     s.vector.inc()
     if(s.builder.toString() != "0") {
-      val vector = s.vector.getVector.toVector ++ Vector(s.builder.toDouble.toString)
-      s.cube.record(vector)
+      val vector = s.vector.getVector.toVector
+      s.cube.record(vector, s.builder.toString())
     }
     s.builder.clear()
     s
@@ -253,9 +259,9 @@ class PxProcessor(file:File) extends DataProcessor {
   }
 }
 
-class VectorIncrementer(values:Vector[Vector[String]]) extends Iterator[Array[String]]{
+class VectorIncrementer(values:Vector[Vector[String]]) extends Iterator[Array[Int]]{
   var end:Boolean = false
-  val vector:Array[Int] = new Array(values.length)
+  val vector:Array[Int] = new Array[Int](values.length).map(i => 1)
   def inc():Unit = inc(vector.length - 1)
 
   @tailrec
@@ -267,18 +273,18 @@ class VectorIncrementer(values:Vector[Vector[String]]) extends Iterator[Array[St
       end = true
     } else {
       vector(pos) += 1
-      if (vector(pos) == values(pos).length) {
-        vector(pos) = 0
+      if (vector(pos) > values(pos).length) {
+        vector(pos) = 1
         inc(pos - 1)
       }
     }
   }
 
-  def getVector: Array[String] = for((p,i) <- vector.zipWithIndex) yield values(i)(p)
+  def getVector: Array[Int] = vector.clone()
 
   def hasNext: Boolean = !end
 
-  def next(): Array[String] = {
+  def next(): Array[Int] = {
     inc()
     getVector
   }

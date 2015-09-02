@@ -33,7 +33,6 @@ object Cube {
   def map(db: DB, mapType: Index): BTreeMap[String, Integer] = db.treeMap[String, Integer](mapType.name)
 
   private def createDb(file: File): DB = DBMaker.fileDB(file)
-    .compressionEnable()
     .transactionDisable()
     .asyncWriteEnable()
     .fileMmapEnableIfSupported()
@@ -45,6 +44,10 @@ abstract sealed class MapType(val name: String)
 case class Index(index: Int) extends MapType("index_" + index)
 
 case class IndexInv(index: Int) extends MapType("inversed_index_" + index)
+
+case class CodesToValues(index:Int, lang:Language) extends MapType("c2v_" + index + "_" + lang.code)
+
+case class ValuesToCodes(index:Int, lang:Language) extends MapType("v2c_" + index + "_" + lang.code)
 
 case object Meta extends MapType("meta_string")
 
@@ -59,6 +62,10 @@ trait DataInternals {
 
   def map(t: MetaList.type): mutable.Map[String, Vector[String]] = getMap[String, Vector[String]](t)
 
+  def map(t:ValuesToCodes) : mutable.Map[String,String] = getMap[String,String](t)
+
+  def map(t:CodesToValues) : mutable.Map[String,String] = getMap[String,String](t)
+
   def getMap[K, V](t: MapType): mutable.Map[K, V]
 
   def deleteMap(t:MapType):Unit
@@ -69,22 +76,49 @@ trait DataInternals {
 }
 
 case class MapDbInternal(db: DB) extends DataInternals {
-  def getMap[K, V](t: MapType): mutable.Map[K, V] = db.treeMap[K, V](t.name)
+  def getMap[K, V](t: MapType): mutable.Map[K, V] = db.treeMapCreate(t.name).makeOrGet[K, V]()
 
   def deleteMap(t:MapType):Unit = db.delete(t.name)
 
   def commit(): Unit = db.commit()
 
-  def close(): Unit = db.close()
+  def close(): Unit = {
+    db.commit()
+    db.close()
+  }
 }
 
 class QueryBuilder(val cube:Cube) {
+
   private val selectedValues: mutable.HashMap[String, Vector[String]] = mutable.HashMap()
   private val groupByValues: mutable.Buffer[Int] = mutable.Buffer()
   private val reduceValues:mutable.HashMap[Int,String] = mutable.HashMap()
   private val reduceMetrics:mutable.HashMap[Int,String] = mutable.HashMap()
+  private var lang:Option[Language] = None
+
+  def in(lang:Language) : QueryBuilder = {
+    this.lang = Some(lang)
+    this
+  }
+
+  def where(lang: Language, tuple: (String, Vector[String])*):QueryBuilder = where(lang,tuple.toMap)
 
   def where(where: (String, Vector[String])*): QueryBuilder = this.where(where.toMap)
+
+  def where(lang:Language, where:Map[String, Vector[String]]): QueryBuilder = {
+    val dimensions = cube.dimensions(lang)
+    val defaultDimensions = cube.dimensions()
+
+    val newWhere:Map[String,Vector[String]] = where.map({case (key,values) =>
+      dimensions.indexOf(key) match {
+        case -1 => throw new CubefriendlyException("dimension " + key + " cannot be found in " + lang.code + " " + dimensions)
+        case i =>
+          val mapping = cube.internal.map(ValuesToCodes(i,lang))
+          defaultDimensions(i) -> values.map(mapping.apply)
+      }
+    })
+    this.where(newWhere)
+  }
 
   def where(where: Map[String, Vector[String]]): QueryBuilder = {
     where.foreach({ case (key, value) =>
@@ -161,11 +195,23 @@ class QueryBuilder(val cube:Cube) {
       (v.vector.zipWithIndex.map({ case (value, index) => cube.internal.map(IndexInv(index))(value)
       }).toVector, v.metrics.toVector))
 
+    val localeResult = lang.map(translateResult(result,_)).getOrElse(result)
+
     if(groupByValues.nonEmpty || reduceValues.nonEmpty){
-      aggregate(result)
+      aggregate(localeResult)
     }else {
-      result
+      localeResult
     }
+  }
+
+  private def translateResult(result:Iterator[(Vector[String], Vector[String])], lang:Language):Iterator[(Vector[String], Vector[String])] = {
+    result.map({case (vector,metrics) =>
+      val result = for ((entry, index) <- vector.zipWithIndex) yield {
+        val codes2values = cube.internal.map(CodesToValues(index, lang))
+        codes2values(entry)
+      }
+      (result,metrics)
+    })
   }
 }
 
@@ -219,6 +265,8 @@ case object MetaName extends MetaType("name")
 abstract sealed class MetaListType(val name: String)
 
 case object MetaDimensions extends MetaListType("dimensions")
+
+case class MetaLangSpecificDimensions(lang:Language) extends MetaListType("dimensions_" + lang.code)
 
 case object MetaMetrics extends MetaListType("metrics")
 

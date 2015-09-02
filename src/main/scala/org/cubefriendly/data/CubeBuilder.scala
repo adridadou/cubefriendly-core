@@ -15,11 +15,10 @@ import scala.collection.mutable
 class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
 
   private val dimensions:mutable.Buffer[String] = mutable.Buffer()
+  private val langDimensions:mutable.Map[Language,Vector[String]] = new mutable.HashMap()
   private val metrics:mutable.Buffer[String] = mutable.Buffer()
   private val dimSize:mutable.HashMap[String,Int] = mutable.HashMap()
 
-  private val langSpecificDimensions:mutable.Map[Language, Vector[String]] = new mutable.HashMap()
-  private val langSpecificValues:mutable.Map[Language,Map[String,Vector[String]]] = new mutable.HashMap()
 
   def metrics(metricList: String*):CubeBuilder = {
     metrics.appendAll(metricList)
@@ -32,6 +31,26 @@ class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
   }
 
   def meta(key: MetaType, value: String): Unit = internal.map(Meta).put(key.name, value)
+
+  def prepareCodes(codes:Vector[Vector[String]]):CubeBuilder = {
+    codes.indices.foreach(i => {
+      val indexMap = internal.map(Index(i))
+      val inversedIndexMap = internal.map(IndexInv(i))
+      codes(i).indices.foreach(j => {
+        val code = codes(i)(j)
+        indexMap.put(code,j + 1)
+        inversedIndexMap.put(j + 1,code)
+        dimSize.put(dimensions(i), codes(i).size)
+      })
+    })
+    this
+  }
+
+  def record(record: Vector[Int], metric:String):CubeBuilder = {
+    val vector:Vector[Integer] = record.map(i => i:java.lang.Integer)
+    cubeDataBuilder.add(vector,Vector(metric))
+    this
+  }
 
   def record(record: Vector[String]):CubeBuilder = {
     val vector: Vector[Integer] = dimensions.filter(dim => !metrics.contains(dim)).zipWithIndex.map({ case (dim, index) =>
@@ -51,15 +70,31 @@ class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
     this
   }
 
+  def dimensions(header:Vector[String], lang:Language):CubeBuilder = {
+    langDimensions.put(lang,header)
+    this
+  }
+
   def dimensions(header:Vector[String]):CubeBuilder = {
     this.dimensions.clear()
     this.dimensions.append(header :_*)
     this
   }
 
-  def dimensions(lang:Language, data:Map[String,Vector[String]]):CubeBuilder = {
-    this.langSpecificDimensions.put(lang,data.keys.toVector)
-    this.langSpecificValues.put(lang,data)
+  def dimensions(lang:Language, data:Vector[Vector[String]]):CubeBuilder = {
+    data.indices.foreach(index =>{
+      val values2codes = internal.map(ValuesToCodes(index,lang))
+      val codes2values = internal.map(CodesToValues(index,lang))
+      val values = data(index)
+      val indexInvMap = internal.map(IndexInv(index))
+      values.indices.foreach(j => {
+        val code = indexInvMap(j + 1)
+        val value = values(j)
+        values2codes.put(value,code)
+        codes2values.put(code,value)
+      })
+    })
+
     this
   }
 
@@ -67,7 +102,11 @@ class CubeBuilder(internal: DataInternals, cubeDataBuilder: CubeDataBuilder) {
     val cube = Cube(internal, cubeDataBuilder.build())
     meta(MetaDimensions, dimensions.toVector)
     meta(MetaMetrics, metrics.toVector)
-    internal.commit()
+
+    langDimensions.foreach({case(lang,values) =>
+      meta(MetaLangSpecificDimensions(lang),values)
+    })
+
     cube
   }
 
