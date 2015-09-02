@@ -24,6 +24,8 @@ trait DataProcessor {
   def process(buffer: Array[Char]):DataProcessor
 
   def complete(): Cube
+
+  def defaultEncoding:String
 }
 
 case class SourceDataHeader(dimensions: Seq[String])
@@ -50,8 +52,7 @@ class DataProcessorProviderImpl extends DataProcessorProvider {
   override def process(name: String, source: File, dest: File): Future[Cube] = {
     val processor = getProcessorByFilename(source.getName,dest)
     SynchronousFileSource(source).runFold(processor)(
-
-      (processor, a) => processor.process(a.decodeString("windows-1252").toCharArray)
+      (processor, a) => processor.process(a.decodeString(processor.defaultEncoding).toCharArray)
     ).map(_.complete())
   }
 

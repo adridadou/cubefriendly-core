@@ -48,6 +48,8 @@ class PxProcessor(file:File) extends DataProcessor {
   var langDimensions:Map[String, Map[Language,Dimension]] = Map()
   val header:mutable.Buffer[(Key,Vector[String])] = mutable.Buffer[(Key,Vector[String])]()
 
+  def defaultEncoding = "windows-1252"
+
   override def process(buffer: Array[Char]): DataProcessor = {
     buffer foreach read
     this
