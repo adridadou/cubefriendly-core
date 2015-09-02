@@ -199,26 +199,27 @@ class PxProcessor(file:File) extends DataProcessor {
     stubs ++ heading
   }
 
+  private def addRecord(s:DataNumberReader):PxStreamState = {
+    s.vector.inc()
+    if(s.builder.toString() != "0") {
+      val vector = s.vector.getVector.toVector ++ Vector(s.builder.toDouble.toString)
+      s.cube.record(vector)
+    }
+    s.builder.clear()
+    s
+  }
+
   private def readData(c:Char, s:DataNumberReader):PxStreamState = {
     c match {
       case ';' =>
         //EOF
-        val vector = s.vector.next().toVector ++ Vector(s.builder.toDouble.toString)
-        s.cube.record(vector)
-        s.builder.clear()
+        addRecord(s)
         EndOfFile(s.cube.toCube)
-      case '\n' if s.builder.nonEmpty =>
-        val vector = s.vector.next().toVector ++ Vector(s.builder.toDouble.toString)
-        s.cube.record(vector)
-        s.builder.clear()
-        s
-      case ' ' if s.builder.nonEmpty =>
-        val value = s.builder.toDouble.toString
-        val array = s.vector.next()
-        array(array.length - 1) = value
-        s.cube.record(array.toVector)
-        s.builder.clear()
-        s
+      case '\n' if s.builder.nonEmpty => addRecord(s)
+      case ' ' if s.builder.nonEmpty => addRecord(s)
+      case '\n' => s
+      case '\r' => s
+      case ' ' => s
       case _ =>
         s.builder.append(c)
         s
@@ -273,13 +274,12 @@ class VectorIncrementer(values:Vector[Vector[String]]) extends Iterator[Array[St
     }
   }
 
+  def getVector: Array[String] = for((p,i) <- vector.zipWithIndex) yield values(i)(p)
+
   def hasNext: Boolean = !end
 
   def next(): Array[String] = {
-    if(end) {
-      throw new CubefriendlyException("no more values!")
-    }
     inc()
-    for((p,i) <- vector.zipWithIndex) yield values(i)(p)
+    getVector
   }
 }
