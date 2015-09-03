@@ -170,8 +170,22 @@ class PxProcessor(file:File) extends DataProcessor {
           case Some(lang) => createCubeHeaderWithLangs(lang, cubeBuilder)
           case None => throw new CubefriendlyException("LANGUAGE property defined but without a value!")
         }
-      //case None => createCubeHeadWithoutLang(cubeBuilder) TODO: handle this case too
+      case None => createCubeHeaderWithoutLang(cubeBuilder)
     }
+  }
+
+  private def createCubeHeaderWithoutLang(cubeBuilder: CubeBuilder) : PxStreamState = {
+    val pxHeader:Map[String, mutable.Buffer[(Key,Vector[String])]] = header.groupBy({case (key,values) => key.name})
+    val dimensions = getDimensions(pxHeader)
+    val codes = dimensions.map( dimension =>
+      pxHeader("VALUES").find({case (key, _) => key.dimension.getOrElse("") == dimension}) match {
+        case Some((key,values)) => values
+        case None => throw new CubefriendlyException("no values found for dimension " + dimension)
+      })
+
+    cubeBuilder.prepareCodes(codes)
+
+    DataReader(cubeBuilder,dimensions, new VectorIncrementer(codes))
   }
 
   private def createCubeHeaderWithLangs(defaultLang:Language, cubeBuilder: CubeBuilder) : PxStreamState = {
@@ -195,7 +209,7 @@ class PxProcessor(file:File) extends DataProcessor {
 
     val codes = dimensions.map(dimension => codesMap.get(dimension) match {
       case Some(values) => values
-      case None => pxHeader("VALUES")(defaultLang).find({ case (key, _) => key.dimension.get == dimension }).map({ case (_, values) => values }) match {
+      case None => pxHeader("VALUES")(defaultLang).find({ case (key, _) => key.dimension.getOrElse("") == dimension }).map({ case (_, values) => values }) match {
         case Some(values) => values.indices.map(_.toString).toVector
         case None => throw new CubefriendlyException("VALUES cannot be found for " + dimension + " in " + defaultLang.code)
       }
@@ -232,6 +246,20 @@ class PxProcessor(file:File) extends DataProcessor {
       .map({case (_,values) => values}).headOption match {
       case Some(h) => h
       case None => throw new CubefriendlyException("no HEADING property found for language " + lang.code)
+    }
+    stubs ++ heading
+  }
+
+  private def getDimensions(pxHeader:Map[String, mutable.Buffer[(Key,Vector[String])]]) : Vector[String] = {
+    val stubs:Vector[String] = pxHeader("STUB")
+      .map({case (_,values) => values}).headOption match {
+      case Some(s) => s
+      case None => throw new CubefriendlyException("no STUB property found")
+    }
+    val heading:Vector[String] = pxHeader("HEADING")
+      .map({case (_,values) => values}).headOption match {
+      case Some(h) => h
+      case None => throw new CubefriendlyException("no HEADING property found")
     }
     stubs ++ heading
   }

@@ -24,7 +24,7 @@ timingFormat := {
   DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
 }
 
-scalacOptions ++= Seq("-unchecked", "-deprecation")
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xlint")
 
 libraryDependencies ++= {
   val akkaV = "2.3.11"
