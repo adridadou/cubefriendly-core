@@ -127,7 +127,7 @@ class PxProcessor(file:File) extends DataProcessor {
 
   private def readHeaderValue(c:Char, s:HeaderReaderStringValue) : PxStreamState = {
     c match {
-      case '\"' if s.builder.last != '\\' =>
+      case '\"' if s.builder.charAt(s.builder.length - 1) != '\\' =>
         s.values += s.builder.toString
         s.builder.clear()
         HeaderReaderValue(key = s.key, values = s.values)
@@ -165,8 +165,12 @@ class PxProcessor(file:File) extends DataProcessor {
   private def prepareCubeForDataReading():PxStreamState = {
     val cubeBuilder = Cube.builder(file).name(name)
     header.find({case (key,values) => key.name == "LANGUAGE"}) match {
-      case Some((key,values)) => createCubeHeaderWithLangs(Language(values.head), cubeBuilder)
-     // case None => createCubeHeadWithoutLang(cubeBuilder)
+      case Some((key,values)) =>
+        values.headOption.map(Language.apply) match {
+          case Some(lang) => createCubeHeaderWithLangs(lang, cubeBuilder)
+          case None => throw new CubefriendlyException("LANGUAGE property defined but without a value!")
+        }
+      //case None => createCubeHeadWithoutLang(cubeBuilder) TODO: handle this case too
     }
   }
 
@@ -179,7 +183,10 @@ class PxProcessor(file:File) extends DataProcessor {
   }
 
   def prepareCodes(cubeBuilder: CubeBuilder, defaultLang:Language, pxHeader:Map[String, Map[Language, mutable.Buffer[(Key,Vector[String])]]]): Vector[Vector[String]] = {
-    val codesMap = pxHeader("CODES")(defaultLang).map({case (key,values) => key.dimension.get -> values}).toMap
+    val codesMap = pxHeader("CODES")(defaultLang).map({case (key,values) => key.dimension match {
+      case Some(dimension) => dimension -> values
+      case None => throw new CubefriendlyException("CODES property has been defined without specifying to which dimension it belongs to!")
+    }}).toMap
     val dimensions = getDimensions(defaultLang,pxHeader)
     cubeBuilder.dimensions(dimensions)
 
@@ -196,7 +203,10 @@ class PxProcessor(file:File) extends DataProcessor {
     langs.foreach(lang => {
       val dimensionsInLang = getDimensions(lang, pxHeader)
       val data = dimensionsInLang.map(dimension => {
-        pxHeader("VALUES")(lang).find({ case (key, _) => key.dimension.getOrElse("") == dimension }).map({ case (_, v) => v }).get
+        pxHeader("VALUES")(lang).find({ case (key, _) => key.dimension.getOrElse("") == dimension }).map({ case (_, v) => v }) match {
+          case Some(values) => values
+          case None => throw new CubefriendlyException("no values found for dimension " + dimension + " in " + lang.code)
+        }
       })
       cubeBuilder.dimensions(lang, data)
       cubeBuilder.dimensions(dimensionsInLang, lang)
@@ -208,16 +218,22 @@ class PxProcessor(file:File) extends DataProcessor {
 
   private def getDimensions(lang:Language, pxHeader:Map[String, Map[Language, mutable.Buffer[(Key,Vector[String])]]]) : Vector[String] = {
     val stubs:Vector[String] = pxHeader("STUB")(lang)
-      .map({case (_,values) => values}).head
+      .map({case (_,values) => values}).headOption match {
+      case Some(s) => s
+      case None => throw new CubefriendlyException("no STUB property found for language " + lang.code)
+    }
     val heading:Vector[String] = pxHeader("HEADING")(lang)
-      .map({case (_,values) => values}).head
+      .map({case (_,values) => values}).headOption match {
+      case Some(h) => h
+      case None => throw new CubefriendlyException("no HEADING property found for language " + lang.code)
+    }
     stubs ++ heading
   }
 
   private def addRecord(s:DataNumberReader):PxStreamState = {
     s.vector.inc()
     if(s.builder.toString() != "0") {
-      val vector = s.vector.getVector.toVector
+      val vector = s.vector.currentVector
       s.cube.record(vector, s.builder.toString())
     }
     s.builder.clear()
@@ -226,7 +242,7 @@ class PxProcessor(file:File) extends DataProcessor {
 
   private def addRecord(s:DataStringReader):PxStreamState = {
     s.vector.inc()
-    val vector = s.vector.getVector.toVector
+    val vector = s.vector.currentVector
     s.cube.record(vector, s.builder.toString())
     s.builder.clear()
     s
@@ -273,7 +289,7 @@ class PxProcessor(file:File) extends DataProcessor {
   }
 }
 
-class VectorIncrementer(values:Vector[Vector[String]]) extends Iterator[Array[Int]]{
+class VectorIncrementer(values:Vector[Vector[String]]) extends Iterator[Vector[Int]]{
   var end:Boolean = false
   val vector:Array[Int] = new Array[Int](values.length).map(i => 1)
   def inc():Unit = inc(vector.length - 1)
@@ -294,12 +310,12 @@ class VectorIncrementer(values:Vector[Vector[String]]) extends Iterator[Array[In
     }
   }
 
-  def getVector: Array[Int] = vector.clone()
+  def currentVector: Vector[Int] = vector.toVector
 
   def hasNext: Boolean = !end
 
-  def next(): Array[Int] = {
+  def next(): Vector[Int] = {
     inc()
-    getVector
+    currentVector
   }
 }
