@@ -176,7 +176,10 @@ class PxProcessor(file:File) extends DataProcessor {
 
   private def createCubeHeaderWithLangs(defaultLang:Language, cubeBuilder: CubeBuilder) : PxStreamState = {
     val pxHeader:Map[String, Map[Language, mutable.Buffer[(Key,Vector[String])]]] = header.groupBy({case (key,values) => key.name}).mapValues(_.groupBy({case (key,values) => key.lang.getOrElse(defaultLang)}))
-    val langs = pxHeader("LANGUAGES")(defaultLang).map({case (_,values) => values.map(Language.apply)}).head
+    val langs = pxHeader("LANGUAGES")(defaultLang).map({case (_,values) => values.map(Language.apply)}).headOption match {
+      case Some(l) => l
+      case None => throw new CubefriendlyException("default LANGUAGE specified but no LANGUAGES")
+    }
     val codes: Vector[Vector[String]] = prepareCodes(cubeBuilder, defaultLang, pxHeader)
 
     prepareDimensions(defaultLang, cubeBuilder, pxHeader, langs, codes)
@@ -192,7 +195,10 @@ class PxProcessor(file:File) extends DataProcessor {
 
     val codes = dimensions.map(dimension => codesMap.get(dimension) match {
       case Some(values) => values
-      case None => pxHeader("VALUES")(defaultLang).find({ case (key, _) => key.dimension.get == dimension }).map({ case (_, values) => values }).get.indices.map(_.toString).toVector
+      case None => pxHeader("VALUES")(defaultLang).find({ case (key, _) => key.dimension.get == dimension }).map({ case (_, values) => values }) match {
+        case Some(values) => values.indices.map(_.toString).toVector
+        case None => throw new CubefriendlyException("VALUES cannot be found for " + dimension + " in " + defaultLang.code)
+      }
     })
 
     cubeBuilder.prepareCodes(codes)
@@ -265,20 +271,18 @@ class PxProcessor(file:File) extends DataProcessor {
     }
   }
 
-  private def readData(c:Char, s:DataStringReader):PxStreamState = {
-    c match {
-      case ';' =>
-        //EOF
-        EndOfFile(s.cube.toCube)
-      case '\"' if s.builder.nonEmpty && s.builder.charAt(s.builder.length - 1) != '\\' => addRecord(s)
-      case '\n' if s.builder.isEmpty => s
-      case '\r' if s.builder.isEmpty => s
-      case ' ' if s.builder.isEmpty => s
-      case '\"' if s.builder.isEmpty => s
-      case _ =>
-        s.builder.append(c)
-        s
-    }
+  private def readData(c:Char, s:DataStringReader):PxStreamState = c match {
+    case ';' =>
+      //EOF
+      EndOfFile(s.cube.toCube)
+    case '\"' if s.builder.nonEmpty && s.builder.charAt(s.builder.length - 1) != '\\' => addRecord(s)
+    case '\n' if s.builder.isEmpty => s
+    case '\r' if s.builder.isEmpty => s
+    case ' ' if s.builder.isEmpty => s
+    case '\"' if s.builder.isEmpty => s
+    case _ =>
+      s.builder.append(c)
+      s
   }
 
   override def complete(): Cube = {
