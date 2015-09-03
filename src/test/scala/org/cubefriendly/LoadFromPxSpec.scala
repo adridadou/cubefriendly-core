@@ -24,9 +24,10 @@ class LoadFromPxSpec extends Specification {
       val pxFile = new File("src/test/resources/px-x-Vornamen_F.px")
       val actual: Cube = Await.result(provider.process(name = cubeName, source = pxFile, dest = tmpFile), Duration.Inf)
       val dimensions = actual.dimensions()
+      val numberOfFirstnames = 29701
       actual.name must be equalTo cubeName
       dimensions must contain(exactly("Vornamen", "Sprachregion", "Geburtsjahr", "Geschlecht"))
-      actual.dimension("Vornamen").values.size  must equalTo(29701)
+      actual.dimension("Vornamen").values.size  must equalTo(numberOfFirstnames)
 
       actual.close()
 

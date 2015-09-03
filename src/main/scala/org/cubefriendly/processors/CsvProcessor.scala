@@ -34,7 +34,7 @@ class CsvProcessor(db: File) extends DataProcessor {
   private var state: CsvStreamState = CsvReadFirstRow(mutable.StringBuilder.newBuilder)
   private var cubeName: String = ""
 
-  def defaultEncoding = "UTF-8"
+  def defaultEncoding:String = "UTF-8"
 
   override def process(buffer: Array[Char]): CsvProcessor = {
     buffer foreach read

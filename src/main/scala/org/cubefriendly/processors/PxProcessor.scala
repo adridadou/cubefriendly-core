@@ -48,7 +48,7 @@ class PxProcessor(file:File) extends DataProcessor {
   var langDimensions:Map[String, Map[Language,Dimension]] = Map()
   val header:mutable.Buffer[(Key,Vector[String])] = mutable.Buffer[(Key,Vector[String])]()
 
-  def defaultEncoding = "windows-1252"
+  def defaultEncoding:String = "windows-1252"
 
   override def process(buffer: Array[Char]): DataProcessor = {
     buffer foreach read
@@ -64,21 +64,22 @@ class PxProcessor(file:File) extends DataProcessor {
     c match {
       case '\n' =>
       case '\r' =>
-      case _ =>
-        state = state match {
-          case s:HeaderReader => readHeaderKey(c,s)
-          case s:HeaderReaderLang => readLang(c,s)
-          case s:HeaderReaderDimension => readDimension(c,s)
-          case s:HeaderReaderValue => startReaderHeaderValue(c, s)
-          case s:HeaderReaderStringValue => readHeaderValue(c, s)
-          case s:HeaderReaderNumberValue => readHeaderValue(c, s)
-          case s:DataReader => startReadDataValue(c, s)
-          case s:DataNumberReader => readData(c,s)
-          case s:DataStringReader => readData(c,s)
-          case s:EndOfFile => s
-        }
+      case _ => routeState(c,state)
     }
     state
+  }
+
+  private def routeState(c:Char, s:PxStreamState) : Unit = state = s match {
+      case s:HeaderReader => readHeaderKey(c,s)
+      case s:HeaderReaderLang => readLang(c,s)
+      case s:HeaderReaderDimension => readDimension(c,s)
+      case s:HeaderReaderValue => startReaderHeaderValue(c, s)
+      case s:HeaderReaderStringValue => readHeaderValue(c, s)
+      case s:HeaderReaderNumberValue => readHeaderValue(c, s)
+      case s:DataReader => startReadDataValue(c, s)
+      case s:DataNumberReader => readData(c,s)
+      case s:DataStringReader => readData(c,s)
+      case s:EndOfFile => s
   }
 
   private def readDimension(c:Char, s:HeaderReaderDimension) : PxStreamState = {
@@ -165,38 +166,44 @@ class PxProcessor(file:File) extends DataProcessor {
     val cubeBuilder = Cube.builder(file).name(name)
     header.find({case (key,values) => key.name == "LANGUAGE"}) match {
       case Some((key,values)) => createCubeHeaderWithLangs(Language(values.head), cubeBuilder)
-     // case None => createCubeHheadWithoutLang(cubeBuilder)
+     // case None => createCubeHeadWithoutLang(cubeBuilder)
     }
   }
 
   private def createCubeHeaderWithLangs(defaultLang:Language, cubeBuilder: CubeBuilder) : PxStreamState = {
     val pxHeader:Map[String, Map[Language, mutable.Buffer[(Key,Vector[String])]]] = header.groupBy({case (key,values) => key.name}).mapValues(_.groupBy({case (key,values) => key.lang.getOrElse(defaultLang)}))
     val langs = pxHeader("LANGUAGES")(defaultLang).map({case (_,values) => values.map(Language.apply)}).head
+    val codes: Vector[Vector[String]] = prepareCodes(cubeBuilder, defaultLang, pxHeader)
 
+    prepareDimensions(defaultLang, cubeBuilder, pxHeader, langs, codes)
+  }
 
-    val codesMap = pxHeader("CODES")(defaultLang)
-      .map({case (key,values) => key.dimension.get -> values}).toMap
+  def prepareCodes(cubeBuilder: CubeBuilder, defaultLang:Language, pxHeader:Map[String, Map[Language, mutable.Buffer[(Key,Vector[String])]]]): Vector[Vector[String]] = {
+    val codesMap = pxHeader("CODES")(defaultLang).map({case (key,values) => key.dimension.get -> values}).toMap
     val dimensions = getDimensions(defaultLang,pxHeader)
     cubeBuilder.dimensions(dimensions)
 
     val codes = dimensions.map(dimension => codesMap.get(dimension) match {
       case Some(values) => values
-      case None => pxHeader("VALUES")(defaultLang).find({case (key,_) => key.dimension.get == dimension}).map({case (_,values) => values}).get.indices.map(_.toString).toVector
+      case None => pxHeader("VALUES")(defaultLang).find({ case (key, _) => key.dimension.get == dimension }).map({ case (_, values) => values }).get.indices.map(_.toString).toVector
     })
 
     cubeBuilder.prepareCodes(codes)
+    codes
+  }
 
+  def prepareDimensions(defaultLang: Language, cubeBuilder: CubeBuilder, pxHeader: Map[String, Map[Language, mutable.Buffer[(Key, Vector[String])]]], langs: Vector[Language], codes: Vector[Vector[String]]): DataReader = {
     langs.foreach(lang => {
-      val dimensionsInLang = getDimensions(lang,pxHeader)
-      val data = dimensionsInLang.map(dimension =>{
-        pxHeader("VALUES")(lang).find({case (key,_) => key.dimension.getOrElse("") == dimension}).map({case (_,v) => v}).get
+      val dimensionsInLang = getDimensions(lang, pxHeader)
+      val data = dimensionsInLang.map(dimension => {
+        pxHeader("VALUES")(lang).find({ case (key, _) => key.dimension.getOrElse("") == dimension }).map({ case (_, v) => v }).get
       })
-      cubeBuilder.dimensions(lang,data)
-      cubeBuilder.dimensions(dimensionsInLang,lang)
+      cubeBuilder.dimensions(lang, data)
+      cubeBuilder.dimensions(dimensionsInLang, lang)
     })
     cubeBuilder.metrics("VALUE")
 
-    DataReader(cubeBuilder, getDimensions(defaultLang,pxHeader), new VectorIncrementer(codes))
+    DataReader(cubeBuilder, getDimensions(defaultLang, pxHeader), new VectorIncrementer(codes))
   }
 
   private def getDimensions(lang:Language, pxHeader:Map[String, Map[Language, mutable.Buffer[(Key,Vector[String])]]]) : Vector[String] = {
@@ -213,6 +220,14 @@ class PxProcessor(file:File) extends DataProcessor {
       val vector = s.vector.getVector.toVector
       s.cube.record(vector, s.builder.toString())
     }
+    s.builder.clear()
+    s
+  }
+
+  private def addRecord(s:DataStringReader):PxStreamState = {
+    s.vector.inc()
+    val vector = s.vector.getVector.toVector
+    s.cube.record(vector, s.builder.toString())
     s.builder.clear()
     s
   }
@@ -238,15 +253,12 @@ class PxProcessor(file:File) extends DataProcessor {
     c match {
       case ';' =>
         //EOF
-        s
-      case ',' if s.builder.head != '\"' =>
-        s.builder.clear()
-        s
-      case ',' =>
-        s.builder.clear()
-        s
-      case '\"' if s.builder.isEmpty || s.builder.charAt(s.builder.length - 1) != '\\' =>
-        s
+        EndOfFile(s.cube.toCube)
+      case '\"' if s.builder.nonEmpty && s.builder.charAt(s.builder.length - 1) != '\\' => addRecord(s)
+      case '\n' if s.builder.isEmpty => s
+      case '\r' if s.builder.isEmpty => s
+      case ' ' if s.builder.isEmpty => s
+      case '\"' if s.builder.isEmpty => s
       case _ =>
         s.builder.append(c)
         s
