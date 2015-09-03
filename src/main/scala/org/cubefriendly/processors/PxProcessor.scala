@@ -304,10 +304,7 @@ class PxProcessor(file:File) extends DataProcessor {
       //EOF
       EndOfFile(s.cube.toCube)
     case '\"' if s.builder.nonEmpty && s.builder.charAt(s.builder.length - 1) != '\\' => addRecord(s)
-    case '\n' if s.builder.isEmpty => s
-    case '\r' if s.builder.isEmpty => s
-    case ' ' if s.builder.isEmpty => s
-    case '\"' if s.builder.isEmpty => s
+    case '\n' | '\r' | ' ' | '\"' if s.builder.isEmpty => s
     case _ =>
       s.builder.append(c)
       s
