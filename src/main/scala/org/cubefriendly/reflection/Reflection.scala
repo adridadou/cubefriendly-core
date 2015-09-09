@@ -1,5 +1,7 @@
 package org.cubefriendly.reflection
 
+import org.cubefriendly.CubefriendlyException
+
 import scala.collection.mutable
 import scala.reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
@@ -23,10 +25,16 @@ trait DimensionValuesSelector {
 }
 
 trait FunctionsHolder[T] {
-  val funcs:mutable.HashMap[String,T] = mutable.HashMap()
+  val _funcs:mutable.HashMap[String,() => T] = mutable.HashMap()
 
-  def newFunc(tree:Tree):T = Reflection.tb.eval(tree).asInstanceOf[T]
+  def newFunc(tree:Tree):() => T = Reflection.tb.eval(tree).asInstanceOf[() => T]
 
+  def funcs(name:String) : T = {
+    _funcs.get(name) match {
+      case Some(f) => f()
+      case None => throw new CubefriendlyException("no function " + name + " found. available:" + _funcs.keys.toSeq)
+    }
+  }
 
   def build(tree:Tree) : T = {
     Reflection.tb.eval(tree).asInstanceOf[T]
@@ -46,36 +54,37 @@ object DimensionValuesSelector extends FunctionsHolder[DimensionValuesSelector]{
     Reflection.tb.parse(fun)
   }
   def register(name:String, select:String):Unit = {
-    val func = newFunc(parse(select))
-    funcs.put(name,func)
+    val func = parse(select)
+    _funcs.put(name,newFunc(func))
   }
 }
 
 object Aggregator extends FunctionsHolder[Aggregator]{
 
   def registerSum():Unit = {
-    val init = "BigDecimal(0)"
+    val init = "0D"
     val finish = "state.toString"
-    val reduce = "{state += BigDecimal(value)\nthis}"
+    val reduce = "{state += value.toDouble\nthis}"
 
     Aggregator.register("sum",init,reduce,finish)
   }
 
   def register(name:String, init:String,reduce:String, finish:String):Unit = {
-    val func = newFunc(parse(init,reduce,finish))
-    funcs.put(name,func)
+    val func = parse(init,reduce,finish)
+    _funcs.put(name,newFunc(func))
   }
 
   def parse(init:String,reduce:String, finish:String) : Tree = {
     val fun =
-      s"""
-         |new org.cubefriendly.reflection.Aggregator {
-         | var state = $init
+      s""" () => new org.cubefriendly.reflection.Aggregator {
+         | var state:java.lang.Double = $init
           | def finish:String = $finish
-          | def reduce(value:String) = $reduce
+          | def reduce(value:String):org.cubefriendly.reflection.Aggregator = $reduce
           |}
       """.stripMargin
 
     Reflection.tb.parse(fun)
   }
+
+  registerSum()
 }

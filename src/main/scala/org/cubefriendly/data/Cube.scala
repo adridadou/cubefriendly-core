@@ -91,14 +91,23 @@ case class MapDbInternal(db: DB) extends DataInternals {
 class QueryBuilder(val cube:Cube) {
 
   private val selectedValues: mutable.HashMap[String, Vector[String]] = mutable.HashMap()
-  private val groupByValues: mutable.Buffer[Int] = mutable.Buffer()
-  private val reduceValues:mutable.HashMap[Int,String] = mutable.HashMap()
+  private val eliminateValues: mutable.Set[Int] = mutable.HashSet()
   private val reduceMetrics:mutable.HashMap[Int,String] = mutable.HashMap()
   private var lang:Option[Language] = None
+
+  cube.metrics().foreach(metric => reduce(metric -> "sum"))
 
   def in(lang:Language) : QueryBuilder = {
     this.lang = Some(lang)
     this
+  }
+
+  def toDefaultDimension(lang:Language, dimension:String) :String = {
+    val dimensionsInLang = cube.dimensions(lang)
+    dimensionsInLang.indexOf(dimension) match {
+      case -1 => throw new CubefriendlyException("cannot find dimension " + dimension + " in " + lang.code)
+      case index => cube.dimensions()(index)
+    }
   }
 
   def where(lang: Language, tuple: (String, Vector[String])*):QueryBuilder = where(lang,tuple.toMap)
@@ -114,7 +123,7 @@ class QueryBuilder(val cube:Cube) {
         case -1 => throw new CubefriendlyException("dimension " + key + " cannot be found in " + lang.code + " " + dimensions)
         case i =>
           val mapping = cube.internal.map(ValuesToCodes(i,lang))
-          defaultDimensions(i) -> values.map(mapping.apply)
+          defaultDimensions(i) -> values.flatMap(mapping.get)
       }
     })
     this.where(newWhere)
@@ -128,87 +137,84 @@ class QueryBuilder(val cube:Cube) {
     this
   }
 
-  def groupBy(dimensions:String*): QueryBuilder = {
-    dimensions.foreach(dim => groupByValues.append(cube.dimensions().indexOf(dim)))
+  def eliminate(lang:Language, dimensions:String*) : QueryBuilder = eliminate(dimensions.map(toDefaultDimension(lang,_)) :_*)
+
+  def eliminate(dimensions:String*): QueryBuilder = {
+    dimensions.foreach(dim => eliminateValues.add(cube.dimensions().indexOf(dim)))
     this
+  }
+
+  def reduce(lang:Language, by: (String, String)*): QueryBuilder = {reduce(by.map{case (key,value) => toDefaultDimension(lang,key) -> value} :_*)
   }
 
   def reduce(by: (String, String)*): QueryBuilder = {
     by.foreach({
-      case (key, value) if cube.dimensions().indexOf(key) > -1 => reduceValues.put(cube.dimensions().indexOf(key), value)
       case (key, value) if cube.metrics().indexOf(key) > -1 => reduceMetrics.put(cube.metrics().indexOf(key), value)
-      case (key,value) => throw new CubefriendlyException("dimension not found \"" + key + "\"")
+      case (key,value) => throw new CubefriendlyException("metric not found \"" + key + "\"")
     })
     this
   }
-  private def validateAggregation() = {
-    if(groupByValues.size + reduceValues.size > 0){
-      val setMoreThanOnce = cube.dimensions().indices.filter(h => groupByValues.contains(h) && reduceValues.keys.contains(h))
-
-      if(setMoreThanOnce.nonEmpty){
-        throw new CubefriendlyException("you cannot set a dimension for group by and reduce at the same time:" + setMoreThanOnce)
-      }
-    }
-  }
 
   private def aggregate(result:Iterator[(Vector[String],Vector[String])]): Iterator[(Vector[String],Vector[String])] = {
-    val aggregatedResult = mutable.HashMap[Vector[(Int,String)],(mutable.HashMap[Int,Aggregator],mutable.HashMap[Int,Aggregator])]()
-    result.foreach({case (record,metrics) =>
-      val newKey = record.zipWithIndex.filter({case(elem,index) => groupByValues.contains(index)}).map({case (elem,index) => (index,record.get(index))})
-      val (aggregationMap,aggregationMetricsMap) = aggregatedResult.getOrElseUpdate(newKey,(mutable.HashMap(),mutable.HashMap()))
-      reduceValues.keys.foreach(idx =>{
-        val current:Aggregator = aggregationMap.getOrElseUpdate(idx,Aggregator.funcs(reduceValues(idx)))
-        current.reduce(record(idx))
-      })
+    val aggregatedResult = mutable.Map.empty[IndexedSeq[String],Array[Aggregator]]
 
-      reduceMetrics.keys.foreach(idx =>{
-        val current:Aggregator = aggregationMetricsMap.getOrElseUpdate(idx,Aggregator.funcs(reduceMetrics.getOrElse(idx,"sum")))
-        current.reduce(metrics(idx))
+    val cubeMetrics = cube.metrics()
+    val metricIndices = cubeMetrics.indices
+    val nbMetrics = cubeMetrics.length
+    val usefulIndexes = cube.dimensions().indices.filter(idx => !eliminateValues.contains(idx))
+
+    result.foreach({case (record,metrics) =>
+      val newKey = usefulIndexes.map(record.apply)
+
+      val aggregationMetrics = aggregatedResult.get(newKey) match {
+        case Some(vector) => vector
+        case None =>
+          val aggregators:Array[Aggregator] = new Array(nbMetrics)
+          metricIndices.foreach(idx => aggregators(idx) = Aggregator.funcs(reduceMetrics.getOrElse(idx,"sum")))
+          aggregatedResult(newKey) = aggregators
+          aggregators
+      }
+      metricIndices.foreach(idx => {aggregationMetrics(idx).reduce(metrics(idx))
       })
     })
-    aggregatedResult.map({case(key,(dims,metrics)) =>
-      (cube.dimensions().indices.filter(idx => reduceValues.contains(idx) || groupByValues.contains(idx)).map(idx =>
-        if (groupByValues.contains(idx)) {
-          key.find({case(index,_) => index == idx}) match {
-            case Some((i,v)) => v
-            case None => throw new CubefriendlyException("Serious bug while aggregating value. Trying to get a value that does not exist!")
-          }
-        }else {
-          dims(idx).finish
-        }
-      ).toVector,
-        cube.metrics().indices.map(idx =>
-          metrics(idx).finish
-      ).toVector)
-    }).toIterator
+
+    aggregatedResult.keys.map(key =>
+      (key.toVector,
+        cubeMetrics.indices.map(idx =>
+          aggregatedResult(key)(idx).finish
+      ).toVector
+    )).toIterator
   }
 
   def run(): Iterator[(Vector[String],Vector[String])] = {
-    validateAggregation()
 
     val q = selectedValues.map({ case (key, values) =>
       val index: Integer = cube.dimensions().indexOf(key)
       val idx = cube.internal.map(Index(index))
       index -> seqAsJavaList(values.map(idx.apply).toSeq)
     }).toMap
+    val dimensionIndexes = cube.dimensions().indices
+    val indexes = dimensionIndexes.map(index => cube.internal.map(IndexInv(index))).toVector
     val result = cube.cubeData.query(mapAsJavaMap(q)).map(v =>
-      (v.vector.zipWithIndex.map({ case (value, index) => cube.internal.map(IndexInv(index))(value)
+      (v.vector.zipWithIndex.map({ case (value, index) => indexes(index)(value)
       }).toVector, v.metrics.toVector))
 
-    val localeResult = lang.map(translateResult(result,_)).getOrElse(result)
+    val localeResult:Iterator[(Vector[String], Vector[String])] = lang.map(lang => {
+      val codes2values:Vector[Map[String, String]] = cube.dimensions().indices.map(index => cube.internal.map(CodesToValues(index, lang)).toMap).toVector
+      translateResult(result,codes2values, lang)
+    }).getOrElse(result)
 
-    if(groupByValues.nonEmpty || reduceValues.nonEmpty){
+    if(eliminateValues.nonEmpty){
       aggregate(localeResult)
     }else {
       localeResult
     }
   }
 
-  private def translateResult(result:Iterator[(Vector[String], Vector[String])], lang:Language):Iterator[(Vector[String], Vector[String])] = {
+  private def translateResult(result:Iterator[(Vector[String], Vector[String])],codes2values:Vector[Map[String, String]], lang:Language):Iterator[(Vector[String], Vector[String])] = {
     result.map({case (vector,metrics) =>
       val result = for ((entry, index) <- vector.zipWithIndex) yield {
-        val codes2values = cube.internal.map(CodesToValues(index, lang))
-        codes2values(entry)
+        codes2values(index)(entry)
       }
       (result,metrics)
     })
@@ -223,11 +229,11 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
   private lazy val metaString = internal.map(Meta)
   private lazy val metaVecString = internal.map(MetaList)
 
-  def dimensions(): Vector[String] = metaVecString("dimensions")
+  def dimensions(): Vector[String] = metaVecString(MetaDimensions.name)
 
   def dimensions(lang:Language): Vector[String] = metaVecString("dimensions_" + lang.code)
 
-  def metrics(): Vector[String] = metaVecString("metrics")
+  def metrics(): Vector[String] = metaVecString(MetaMetrics.name)
 
   def name(): String = metaString("name")
 
@@ -237,7 +243,7 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
     dimensions().indexOf(dimension) match {
       case -1 => this
       case i =>
-        cubeData.toMetric(i)
+        cubeData.toMetric(i, internal.map(IndexInv(i)))
         internal.deleteMap(Index(i))
         internal.deleteMap(IndexInv(i))
         metaVecString.put(MetaDimensions.name,dimensions().filter(h => h != dimension))

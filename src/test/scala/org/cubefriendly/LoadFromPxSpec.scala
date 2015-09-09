@@ -9,6 +9,8 @@ import org.specs2.mutable.Specification
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
+import org.scalameter._
+
 /**
  * Cubefriendly
  * Created by davidroon on 01.09.15.
@@ -22,19 +24,43 @@ class LoadFromPxSpec extends Specification {
       val cubeName = "px-x-Vornamen_F.px"
       val provider: DataProcessorProvider = new DataProcessorProviderImpl()
       val pxFile = new File("src/test/resources/px-x-Vornamen_F.px")
-      val actual: Cube = Await.result(provider.process(name = cubeName, source = pxFile, dest = tmpFile), Duration.Inf)
-      val dimensions = actual.dimensions()
-      val numberOfFirstnames = 29701
-      actual.name must be equalTo cubeName
-      dimensions must contain(exactly("Vornamen", "Sprachregion", "Geburtsjahr", "Geschlecht"))
-      actual.dimension("Vornamen").values.size  must equalTo(numberOfFirstnames)
+      val time = measure {
+        val actual: Cube = Await.result(provider.process(name = cubeName, source = pxFile, dest = tmpFile), Duration.Inf)
+        val dimensions = actual.dimensions()
+        val numberOfFirstnames = 29701
+        actual.name must be equalTo cubeName
+        dimensions must contain(exactly("Vornamen", "Sprachregion", "Geburtsjahr", "Geschlecht"))
+        actual.dimension("Vornamen").values.size must equalTo(numberOfFirstnames)
+        actual.close()
+      }
 
-      actual.close()
+      println(s"Total creation time: $time")
 
       val lang = Language("fr")
 
       val cube = Cube.open(tmpFile)
-      val result = QueryBuilder.query(cube).in(lang).where(lang,("Prénoms",Vector("Adrienne"))).run().toVector
+
+      var result:Iterator[(Vector[String], Vector[String])] = Iterator()
+
+      val years = (1900 until 2004).map(_.toString).toVector
+
+      val time2 = measure {
+        result = QueryBuilder.query(cube).in(lang)
+          .eliminate(lang, "Année de naissance")
+          .where(lang,"Année de naissance" -> years)
+          .where(lang, "Région linguistique" -> Vector("Suisse"))
+          .run()
+      }
+
+      println(s"Total query time: $time2")
+
+
+      val time3 = measure {
+        val test = result.toVector
+        test
+      }
+
+      println(s"Total vector time: $time3")
 
       success
     }
