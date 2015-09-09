@@ -37,7 +37,7 @@ trait FunctionsHolder[T] {
   }
 
   def build(tree:Tree) : T = {
-    Reflection.tb.eval(tree).asInstanceOf[T]
+    Reflection.tb.eval(tree).asInstanceOf[() => T]()
   }
 }
 
