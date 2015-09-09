@@ -12,12 +12,12 @@ class ReflectionSpec extends Specification {
     "be able to build a aggregator for reducing values" in {
 
       val init = "0D"
-      val finish = "state.toString"
+      val finish = "state"
       val reduce = "{state += value.toDouble\nthis}"
 
       val aggregation:Aggregator = Aggregator.build(Aggregator.parse(init,reduce,finish))
       val result:Aggregator = Seq("1","2","3").foldLeft(aggregation)((sum,elem) => aggregation.reduce(elem))
-      result.finish must beEqualTo("6.0")
+      result.finish must beEqualTo(6d)
     }
   }
 

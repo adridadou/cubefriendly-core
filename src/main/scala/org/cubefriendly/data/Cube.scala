@@ -181,7 +181,7 @@ class QueryBuilder(val cube:Cube) {
     aggregatedResult.keys.map(key =>
       (key.toVector,
         cubeMetrics.indices.map(idx =>
-          aggregatedResult(key)(idx).finish
+          aggregatedResult(key)(idx).finish.toString
       ).toVector
     )).toIterator
   }

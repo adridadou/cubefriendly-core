@@ -17,7 +17,7 @@ object Reflection {
 
 trait Aggregator {
   def reduce(value:String):Aggregator
-  def finish:String
+  def finish:Double
 }
 
 trait DimensionValuesSelector {
@@ -63,7 +63,7 @@ object Aggregator extends FunctionsHolder[Aggregator]{
 
   def registerSum():Unit = {
     val init = "0D"
-    val finish = "state.toString"
+    val finish = "state"
     val reduce = "{state += value.toDouble\nthis}"
 
     Aggregator.register("sum",init,reduce,finish)
@@ -78,7 +78,7 @@ object Aggregator extends FunctionsHolder[Aggregator]{
     val fun =
       s""" () => new org.cubefriendly.reflection.Aggregator {
          | var state:java.lang.Double = $init
-          | def finish:String = $finish
+          | def finish:Double = $finish
           | def reduce(value:String):org.cubefriendly.reflection.Aggregator = $reduce
           |}
       """.stripMargin
