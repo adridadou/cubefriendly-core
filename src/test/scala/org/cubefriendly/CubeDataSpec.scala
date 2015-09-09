@@ -3,7 +3,6 @@ package org.cubefriendly
 import java.io.File
 
 import org.cubefriendly.data.{Cube, QueryBuilder}
-import org.cubefriendly.reflection.Aggregator
 import org.specs2.mutable._
 
 /**
