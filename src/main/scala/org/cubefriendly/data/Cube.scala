@@ -93,7 +93,6 @@ case class MapDbInternal(db: DB) extends DataInternals {
 
 class QueryBuilder(val cube:Cube) {
 
-  // Just specified a maximum cache size in elements
   implicit val scalaCache = QueryBuilder.scalaCache
 
   private val selectedValues: mutable.HashMap[String, Vector[String]] = mutable.HashMap()
@@ -163,9 +162,9 @@ class QueryBuilder(val cube:Cube) {
 
   private def searchKey():String = {
     val value = selectedValues.toString() + reduceMetrics.toString() + eliminateValues.toString()
-    val bytes = MD5.messageDigest.digest(value.getBytes)
+    val digest = MD5.messageDigest
+    val bytes = digest.digest(value.getBytes)
     val key = new String(bytes)
-    println(key)
     key
   }
 
@@ -237,7 +236,6 @@ class QueryBuilder(val cube:Cube) {
 
 object QueryBuilder {
 
-  // Just specified a maximum cache size in elements
   val scalaCache = ScalaCache(LruMapCache(100))
 
   def query(cube:Cube):QueryBuilder = new QueryBuilder(cube)
