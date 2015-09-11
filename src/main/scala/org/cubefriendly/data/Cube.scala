@@ -236,7 +236,9 @@ class QueryBuilder(val cube:Cube) {
 
 object QueryBuilder {
 
-  val scalaCache = ScalaCache(LruMapCache(100))
+  val cacheSize = 100
+
+  val scalaCache = ScalaCache(LruMapCache(cacheSize))
 
   def query(cube:Cube):QueryBuilder = new QueryBuilder(cube)
 }
