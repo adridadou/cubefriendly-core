@@ -54,13 +54,24 @@ class LoadFromPxSpec extends Specification {
 
       println(s"Total query time: $time2")
 
-
       val time3 = measure {
         val test = result.toVector
         test
       }
 
       println(s"Total vector time: $time3")
+
+
+
+      val time4 = measure {
+        result = QueryBuilder.query(cube).in(lang)
+          .eliminate(lang, "Année de naissance")
+          .where(lang,"Année de naissance" -> years)
+          .where(lang, "Région linguistique" -> Vector("Suisse"))
+          .run()
+      }
+
+      println(s"Total query time: $time4")
 
       success
     }

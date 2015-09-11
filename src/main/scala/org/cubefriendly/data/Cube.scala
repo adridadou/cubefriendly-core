@@ -11,6 +11,9 @@ import org.mapdb.{BTreeMap, DB, DBMaker}
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
+import scalacache._
+import lrumap._
+
 /**
  * Cubefriendly
  * Created by david on 23.02.15.
@@ -90,6 +93,9 @@ case class MapDbInternal(db: DB) extends DataInternals {
 
 class QueryBuilder(val cube:Cube) {
 
+  // Just specified a maximum cache size in elements
+  implicit val scalaCache = QueryBuilder.scalaCache
+
   private val selectedValues: mutable.HashMap[String, Vector[String]] = mutable.HashMap()
   private val eliminateValues: mutable.Set[Int] = mutable.HashSet()
   private val reduceMetrics:mutable.HashMap[Int,String] = mutable.HashMap()
@@ -155,7 +161,15 @@ class QueryBuilder(val cube:Cube) {
     this
   }
 
-  private def aggregate(result:Iterator[(Vector[String],Vector[String])]): Iterator[(Vector[String],Vector[String])] = {
+  private def searchKey():String = {
+    val value = selectedValues.toString() + reduceMetrics.toString() + eliminateValues.toString()
+    val bytes = MD5.messageDigest.digest(value.getBytes)
+    val key = new String(bytes)
+    println(key)
+    key
+  }
+
+  private def aggregate(result:Iterator[(Vector[String],Vector[String])]): Vector[(Vector[String],Vector[String])] = caching(cube.name() + searchKey()) {
     val aggregatedResult = mutable.Map.empty[IndexedSeq[String],Array[Aggregator]]
 
     val cubeMetrics = cube.metrics()
@@ -183,7 +197,7 @@ class QueryBuilder(val cube:Cube) {
         cubeMetrics.indices.map(idx =>
           aggregatedResult(key)(idx).finish.toString
       ).toVector
-    )).toIterator
+    )).toVector
   }
 
   def run(): Iterator[(Vector[String],Vector[String])] = {
@@ -205,7 +219,7 @@ class QueryBuilder(val cube:Cube) {
     }).getOrElse(result)
 
     if(eliminateValues.nonEmpty){
-      aggregate(localeResult)
+      aggregate(localeResult).toIterator
     }else {
       localeResult
     }
@@ -222,6 +236,10 @@ class QueryBuilder(val cube:Cube) {
 }
 
 object QueryBuilder {
+
+  // Just specified a maximum cache size in elements
+  val scalaCache = ScalaCache(LruMapCache(100))
+
   def query(cube:Cube):QueryBuilder = new QueryBuilder(cube)
 }
 
