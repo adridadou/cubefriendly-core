@@ -27,7 +27,7 @@ timingFormat := {
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xlint")
 
 libraryDependencies ++= {
-  val akkaV = "2.3.11"
+  val akkaV = "2.3.13"
   val akkaStreamV = "1.0"
   Seq(
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
