@@ -22,6 +22,7 @@ trait Aggregator {
 
 trait DimensionValuesSelector {
   def select(value:String, args: String*):Boolean
+  def bestResult(value:String, args:String*):Boolean
 }
 
 trait FunctionsHolder[T] {
@@ -45,21 +46,24 @@ object DimensionValuesSelector extends FunctionsHolder[DimensionValuesSelector]{
 
   def registerSearch(): Unit = {
     val select = "value.contains(args.head)"
-    register("search", select)
+    val bestResult = "value.equalsIgnoreCase(args.head)"
+    register("search", select, bestResult)
   }
 
-  private def parse(select:String) : Tree = {
+  private def parse(select:String, bestResult:String) : Tree = {
     val fun =
       s"""
          |() => new org.cubefriendly.reflection.DimensionValuesSelector {
           | def select(value:String, args:String*):Boolean = {$select
+          |}
+          |def bestResult(value:String, args:String*):Boolean = {$bestResult
           |}}
       """.stripMargin
 
     Reflection.tb.parse(fun)
   }
-  def register(name:String, select:String):Unit = {
-    val func = parse(select)
+  def register(name:String, select:String, bestResult:String):Unit = {
+    val func = parse(select, bestResult)
     _funcs.put(name,newFunc(func))
   }
 
