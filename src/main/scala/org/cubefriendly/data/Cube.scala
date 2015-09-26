@@ -5,7 +5,7 @@ import java.io.File
 import org.cubefriendly.CubefriendlyException
 import org.cubefriendly.engine.cube.CubeData
 import org.cubefriendly.processors.Language
-import org.cubefriendly.reflection.Aggregator
+import org.cubefriendly.reflection.{DimensionValuesSelector, Aggregator}
 import org.mapdb.{BTreeMap, DB, DBMaker}
 
 import scala.collection.JavaConversions._
@@ -271,12 +271,44 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
     }
   }
 
+  def searchDimension(name:String, lang:Language, func: DimensionValuesSelector, args:Vector[String], limit:Option[Int]):Vector[String] = {
+    dimensions(lang).indexOf(name) match {
+      case -1 => throw new NoSuchElementException("no dimension " + name + " in " + lang.code + " available:" + dimensions(lang))
+      case i =>
+        val mapping = internal.map(CodesToValues(i,lang))
+        val values = internal.map(Index(i))
+        val it = values.keysIterator.map(mapping.apply).filter(func.select(_,args: _*))
+          limit.map(it.take).getOrElse(it).toVector
+    }
+  }
+
+  def searchDimension(name:String, func:DimensionValuesSelector, args:Vector[String], limit:Option[Int]):Vector[String] = {
+    dimensions().indexOf(name) match {
+      case -1 => throw new NoSuchElementException("no dimension " + name + " available:" + dimensions())
+      case i =>
+        val values = internal.map(Index(i))
+        val it = values.keysIterator.filter(func.select(_, args: _*))
+        limit.map(it.take).getOrElse(it).toVector
+    }
+  }
+
   def dimension(name: String): Dimension = {
     dimensions().indexOf(name) match {
-      case -1 => throw new NoSuchElementException("no dimension " + name)
+      case -1 => throw new NoSuchElementException("no dimension " + name + " available:" + dimensions())
       case i =>
         val values = internal.map(IndexInv(i))
         val vec = (1 to values.size).map(index => values(index)).toVector
+        Dimension(name, vec)
+    }
+  }
+
+  def dimension(name:String, lang:Language) = {
+    dimensions(lang).indexOf(name) match {
+      case -1 => throw new NoSuchElementException("no dimension " + name + " in " + lang.code + " available:" + dimensions(lang))
+      case i =>
+        val mapping = internal.map(CodesToValues(i,lang))
+        val values = internal.map(IndexInv(i))
+        val vec = (1 to values.size).map(index => mapping(values(index))).toVector
         Dimension(name, vec)
     }
   }

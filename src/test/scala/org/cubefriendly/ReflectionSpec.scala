@@ -1,6 +1,6 @@
 package org.cubefriendly
 
-import org.cubefriendly.reflection.Aggregator
+import org.cubefriendly.reflection.{DimensionValuesSelector, Aggregator}
 import org.specs2.mutable._
 /**
  * Cubefriendly
@@ -19,6 +19,14 @@ class ReflectionSpec extends Specification {
       val result:Aggregator = Seq("1","2","3").foldLeft(aggregation)((sum,elem) => aggregation.reduce(elem))
       result.finish must beEqualTo(6d)
     }
+
+    "be able to search for a term in a list" in {
+      val search = DimensionValuesSelector.funcs("search")
+
+      search.select("abc","e") should equalTo(false)
+      search.select("abc","b") should equalTo(true)
+    }
+
   }
 
 }

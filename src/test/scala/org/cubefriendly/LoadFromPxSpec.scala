@@ -4,6 +4,7 @@ import java.io.File
 
 import org.cubefriendly.data.{QueryBuilder, Cube}
 import org.cubefriendly.processors.{Language, DataProcessorProviderImpl, DataProcessorProvider}
+import org.cubefriendly.reflection.DimensionValuesSelector
 import org.specs2.mutable.Specification
 
 import scala.concurrent.Await
@@ -35,10 +36,9 @@ class LoadFromPxSpec extends Specification {
       }
 
       println(s"Total creation time: $time")
+      val cube = Cube.open(tmpFile)
 
       val lang = Language("fr")
-
-      val cube = Cube.open(tmpFile)
 
       var result:Iterator[(Vector[String], Vector[String])] = Iterator()
 
@@ -61,18 +61,15 @@ class LoadFromPxSpec extends Specification {
 
       println(s"Total vector time: $time3")
 
-
-
       val time4 = measure {
         result = QueryBuilder.query(cube).in(lang)
           .eliminate(lang, "Année de naissance")
-          .where(lang,"Année de naissance" -> years)
+          .where(lang, "Année de naissance" -> years)
           .where(lang, "Région linguistique" -> Vector("Suisse"))
           .run()
       }
 
       println(s"Total query time: $time4")
-
       success
     }
   }
