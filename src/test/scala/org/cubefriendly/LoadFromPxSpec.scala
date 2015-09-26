@@ -4,7 +4,6 @@ import java.io.File
 
 import org.cubefriendly.data.{QueryBuilder, Cube}
 import org.cubefriendly.processors.{Language, DataProcessorProviderImpl, DataProcessorProvider}
-import org.cubefriendly.reflection.DimensionValuesSelector
 import org.specs2.mutable.Specification
 
 import scala.concurrent.Await
@@ -31,7 +30,7 @@ class LoadFromPxSpec extends Specification {
         val numberOfFirstnames = 29701
         actual.name must be equalTo cubeName
         dimensions must contain(exactly("Vornamen", "Sprachregion", "Geburtsjahr", "Geschlecht"))
-        actual.dimension("Vornamen").values.size must equalTo(numberOfFirstnames)
+        actual.dimension("Vornamen").size must equalTo(numberOfFirstnames)
         actual.close()
       }
 

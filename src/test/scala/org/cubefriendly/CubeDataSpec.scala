@@ -38,9 +38,9 @@ class CubeDataSpec extends Specification  {
 
       actual.dimensions() must contain(exactly("year","country","debt"))
 
-      actual.dimension("year").values must contain(exactly("1990"))
-      actual.dimension("country").values must contain(exactly("Switzerland"))
-      actual.dimension("debt").values must contain(exactly("30000000"))
+      actual.dimension("year") must contain(exactly("1990"))
+      actual.dimension("country") must contain(exactly("Switzerland"))
+      actual.dimension("debt") must contain(exactly("30000000"))
     }
 
     "add a values only if it does not exist already" in {
@@ -56,9 +56,9 @@ class CubeDataSpec extends Specification  {
 
       actual.dimensions() must contain(exactly("year","country","debt"))
 
-      actual.dimension("year").values must contain(exactly("1990", "1995"))
-      actual.dimension("country").values must contain(exactly("Switzerland", "France"))
-      actual.dimension("debt").values must contain(exactly("30000000", "3000000"))
+      actual.dimension("year") must contain(exactly("1990", "1995"))
+      actual.dimension("country") must contain(exactly("Switzerland", "France"))
+      actual.dimension("debt") must contain(exactly("30000000", "3000000"))
     }
 
     "query the values" in {
