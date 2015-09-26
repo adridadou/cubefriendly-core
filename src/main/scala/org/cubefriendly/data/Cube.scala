@@ -290,7 +290,7 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
       case i =>
         val values = internal.map(Index(i))
         val it = values.keysIterator.filter(func.select(_, args: _*))
-        limit.map(it.take).getOrElse(it).toVector
+        limit.map(it.take).getOrElse(it).toSet.toVector
     }
   }
 
