@@ -280,7 +280,7 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
         val best = values.keysIterator.map(mapping.apply).filter(func.bestResult(_,args:_*))
         val select = values.keysIterator.map(mapping.apply).filter(func.select(_,args: _*))
         val result:Iterator[String] = best ++ select
-          limit.map(result.take).getOrElse(result).toVector
+        limit.map(result.take).getOrElse(result).toSet.toVector
     }
   }
 
@@ -294,24 +294,22 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
     }
   }
 
-  def dimension(name: String): Dimension = {
+  def dimension(name: String): Vector[String] = {
     dimensions().indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name + " available:" + dimensions())
       case i =>
         val values = internal.map(IndexInv(i))
-        val vec = (1 to values.size).map(index => values(index)).toVector
-        Dimension(name, vec)
+        (1 to values.size).map(index => values(index)).toVector
     }
   }
 
-  def dimension(name:String, lang:Language):Dimension = {
+  def dimension(name:String, lang:Language):Vector[String] = {
     dimensions(lang).indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name + " in " + lang.code + " available:" + dimensions(lang))
       case i =>
         val mapping = internal.map(CodesToValues(i,lang))
         val values = internal.map(IndexInv(i))
-        val vec = (1 to values.size).map(index => mapping(values(index))).toVector
-        Dimension(name, vec)
+        (1 to values.size).map(index => mapping(values(index))).toVector
     }
   }
 }
@@ -327,6 +325,3 @@ case object MetaDimensions extends MetaListType("dimensions")
 case class MetaLangSpecificDimensions(lang:Language) extends MetaListType("dimensions_" + lang.code)
 
 case object MetaMetrics extends MetaListType("metrics")
-
-case class Dimension(name:String, values:Vector[String])
-
