@@ -23,8 +23,8 @@ class ReflectionSpec extends Specification {
     "be able to search for a term in a list" in {
       val search = DimensionValuesSelector.funcs("search")
 
-      search.select("abc","e") should equalTo(false)
-      search.select("abc","b") should equalTo(true)
+      search.select("abc",Map("term" -> "e")) should equalTo(false)
+      search.select("abc",Map("term" -> "b")) should equalTo(true)
     }
 
   }

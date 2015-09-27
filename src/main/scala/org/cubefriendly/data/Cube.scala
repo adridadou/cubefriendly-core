@@ -271,26 +271,26 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
     }
   }
 
-  def searchDimension(name:String, lang:Language, func: DimensionValuesSelector, args:Vector[String], limit:Option[Int]):Vector[String] = {
+  def searchDimension(name:String, lang:Language, func: DimensionValuesSelector, args:Map[String, String], limit:Option[Int]):Vector[String] = {
     dimensions(lang).indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name + " in " + lang.code + " available:" + dimensions(lang))
       case i =>
         val mapping = internal.map(CodesToValues(i,lang))
         val values = internal.map(Index(i))
-        val best = values.keysIterator.map(mapping.apply).filter(func.bestResult(_,args:_*))
-        val select = values.keysIterator.map(mapping.apply).filter(func.select(_,args: _*))
+        val best = values.keysIterator.map(mapping.apply).filter(func.bestResult(_,args))
+        val select = values.keysIterator.map(mapping.apply).filter(func.select(_,args))
         val result:Iterator[String] = best ++ select
-        limit.map(result.take).getOrElse(result).toSet.toVector
+        limit.map(result.take).getOrElse(result).toVector.distinct
     }
   }
 
-  def searchDimension(name:String, func:DimensionValuesSelector, args:Vector[String], limit:Option[Int]):Vector[String] = {
+  def searchDimension(name:String, func:DimensionValuesSelector, args:Map[String, String], limit:Option[Int]):Vector[String] = {
     dimensions().indexOf(name) match {
       case -1 => throw new NoSuchElementException("no dimension " + name + " available:" + dimensions())
       case i =>
         val values = internal.map(Index(i))
-        val it = values.keysIterator.filter(func.select(_, args: _*))
-        limit.map(it.take).getOrElse(it).toSet.toVector
+        val it = values.keysIterator.filter(func.select(_, args))
+        limit.map(it.take).getOrElse(it).toVector.distinct
     }
   }
 
