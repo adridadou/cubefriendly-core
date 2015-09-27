@@ -6,6 +6,7 @@ import scala.collection.mutable
 import scala.reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
 
+
 /**
  * Cubefriendly
  * Created by david on 12.03.15.
@@ -23,6 +24,10 @@ trait Aggregator {
 trait DimensionValuesSelector {
   def select(value:String, args: Map[String,String]):Boolean
   def bestResult(value:String, args:Map[String,String]):Boolean
+}
+
+trait ResultTransformer {
+  def transform(result:Iterator[(Vector[String], Vector[String])], args:Map[String, String]):Iterator[(Vector[String], Vector[String])]
 }
 
 trait FunctionsHolder[T] {
@@ -100,4 +105,77 @@ object Aggregator extends FunctionsHolder[Aggregator]{
   }
 
   registerSum()
+}
+
+class Top extends ResultTransformer {
+  override def transform(results: Iterator[(Vector[String], Vector[String])], args: Map[String, String]): Iterator[(Vector[String], Vector[String])] = {
+    import scala.util.Try
+    val max = args("limit").toInt
+    val metricIndex = args.get("metricIndex").map(_.toInt).getOrElse(0)
+    var minValue = Double.NaN
+    results.foldLeft(mutable.Buffer[(Vector[String], Vector[String])]())((buffer,record) => {
+      if(buffer.length < max){
+        buffer.append(record)
+        minValue = buffer.map({case (vector,metrics) => Try(metrics(metricIndex).toDouble).toOption.getOrElse(Double.NaN)}).min
+      }else {
+        val currentValue = Try(record._2(metricIndex).toDouble).toOption.getOrElse(Double.NaN)
+        if(minValue < currentValue) {
+          val index = buffer.indexWhere({case(vector, metrics) => Try(metrics(metricIndex).toDouble).toOption.getOrElse(Double.NaN) == minValue})
+          buffer.remove(index)
+          buffer.append(record)
+          minValue = buffer.map({case (vector,metrics) => Try(metrics(metricIndex).toDouble).toOption.getOrElse(Double.NaN)}).min
+        }
+      }
+
+      buffer
+    }).sortBy({case(vector,metrics) => -Try(metrics(metricIndex).toDouble).toOption.getOrElse(Double.NaN)}).toIterator
+  }
+}
+
+object ResultTransformer extends FunctionsHolder[ResultTransformer]{
+
+  def registerTop(): Unit = {
+    val transform =
+      """
+        |import scala.util.Try
+        |    val max = args("limit").toInt
+        |    val metricIndex = args.get("metricIndex").map(_.toInt).getOrElse(0)
+        |    var minValue = Double.NaN
+        |    results.foldLeft(scala.collection.mutable.Buffer[(Vector[String], Vector[String])]())((buffer,record) => {
+        |      if(buffer.length < max){
+        |        buffer.append(record)
+        |        minValue = buffer.map({case (vector,metrics) => Try(metrics(metricIndex).toDouble).toOption.getOrElse(Double.NaN)}).min
+        |      }else {
+        |        val currentValue = Try(record._2(metricIndex).toDouble).toOption.getOrElse(Double.NaN)
+        |        if(minValue < currentValue) {
+        |          val index = buffer.indexWhere({case(vector, metrics) => Try(metrics(metricIndex).toDouble).toOption.getOrElse(Double.NaN) == minValue})
+        |          buffer.remove(index)
+        |          buffer.append(record)
+        |          minValue = buffer.map({case (vector,metrics) => Try(metrics(metricIndex).toDouble).toOption.getOrElse(Double.NaN)}).min
+        |        }
+        |      }
+        |
+        |      buffer
+        |    }).sortBy({case(vector,metrics) => -Try(metrics(metricIndex).toDouble).toOption.getOrElse(Double.NaN)}).toIterator
+      """.stripMargin
+    register("top", transform)
+  }
+
+  private def parse(transform:String) : Tree = {
+    val fun =
+      s"""
+         |() => new org.cubefriendly.reflection.ResultTransformer {
+         | def transform(results:Iterator[(Vector[String],Vector[String])], args:Map[String, String]):Iterator[(Vector[String],Vector[String])] = {$transform
+          |}}
+      """.stripMargin
+
+    Reflection.tb.parse(fun)
+  }
+  def register(name:String, transform:String):Unit = {
+    val func = parse(transform)
+    _funcs.put(name,newFunc(func))
+  }
+
+  registerTop()
+
 }

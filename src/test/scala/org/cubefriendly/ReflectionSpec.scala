@@ -1,6 +1,6 @@
 package org.cubefriendly
 
-import org.cubefriendly.reflection.{DimensionValuesSelector, Aggregator}
+import org.cubefriendly.reflection.{ResultTransformer, DimensionValuesSelector, Aggregator}
 import org.specs2.mutable._
 /**
  * Cubefriendly
@@ -25,6 +25,15 @@ class ReflectionSpec extends Specification {
 
       search.select("abc",Map("term" -> "e")) should equalTo(false)
       search.select("abc",Map("term" -> "b")) should equalTo(true)
+    }
+
+    "be able to transform result with the top x" in {
+      val result = Iterator((Vector("1"),Vector("1")),(Vector("2"),Vector("2")),(Vector("3"),Vector("3")),(Vector("a"),Vector("a")))
+      val top3 = ResultTransformer.funcs("top").transform(result,Map("limit" -> "2"))
+
+      println(top3.toVector)
+
+      success
     }
 
   }
