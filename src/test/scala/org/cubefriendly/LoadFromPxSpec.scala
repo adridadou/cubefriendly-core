@@ -43,6 +43,20 @@ class LoadFromPxSpec extends Specification {
 
       val years = (1900 until 2004).map(_.toString).toVector
 
+      cube.searchDimension("Vornamen",None,"search", Map("term" -> "Dav"), 20)
+      cube.searchDimension("Prénoms", Some(Language("fr")),"search",Map("term" -> "Dav"), 20)
+
+      val searchDimTime = measure {
+        cube.searchDimension("Prénoms", Some(Language("fr")),"search",Map("term" -> "Dav"), 20)
+      }
+
+      val searchDimTimeNoLang = measure {
+        cube.searchDimension("Vornamen",None,"search", Map("term" -> "Dav"), 20)
+      }
+
+      println(s"Total dimension query time: $searchDimTime")
+      println(s"Total query time codes directly: $searchDimTimeNoLang")
+
       val time2 = measure {
         result = QueryBuilder.query(cube).in(lang)
           .eliminate(lang, "Année de naissance")

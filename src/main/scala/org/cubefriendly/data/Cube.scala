@@ -247,6 +247,11 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
   private lazy val metaString = internal.map(Meta)
   private lazy val metaVecString = internal.map(MetaList)
 
+  def dimensions(lang:Option[Language]): Vector[String] = lang match {
+    case Some(l) => dimensions(l)
+    case None => dimensions()
+  }
+
   def dimensions(): Vector[String] = metaVecString(MetaDimensions.name)
 
   def dimensions(lang:Language): Vector[String] = metaVecString("dimensions_" + lang.code)
@@ -271,26 +276,14 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
     }
   }
 
-  def searchDimension(name:String, lang:Language, func: DimensionValuesSelector, args:Map[String, String], limit:Option[Int]):Vector[String] = {
-    dimensions(lang).indexOf(name) match {
-      case -1 => throw new NoSuchElementException("no dimension " + name + " in " + lang.code + " available:" + dimensions(lang))
-      case i =>
-        val mapping = internal.map(CodesToValues(i,lang))
-        val values = internal.map(Index(i))
-        val best = values.keysIterator.map(mapping.apply).filter(func.bestResult(_,args))
-        val select = values.keysIterator.map(mapping.apply).filter(func.select(_,args))
-        val result:Iterator[String] = best ++ select
-        limit.map(result.take).getOrElse(result).toVector.distinct
-    }
+  def searchDimension(dimension:String, lang:Option[Language],func:String, args:Map[String, String], limit:Int) : Vector[String] = {
+    DimensionValuesSelector.funcs(func).select(this,dimension,lang,args).take(limit).toVector
   }
 
-  def searchDimension(name:String, func:DimensionValuesSelector, args:Map[String, String], limit:Option[Int]):Vector[String] = {
-    dimensions().indexOf(name) match {
-      case -1 => throw new NoSuchElementException("no dimension " + name + " available:" + dimensions())
-      case i =>
-        val values = internal.map(Index(i))
-        val it = values.keysIterator.filter(func.select(_, args))
-        limit.map(it.take).getOrElse(it).toVector.distinct
+  def dimension(name:String, lang:Option[Language]):Iterable[String] = {
+    lang match {
+      case Some(l) => dimension(name,l)
+      case None => dimension(name)
     }
   }
 

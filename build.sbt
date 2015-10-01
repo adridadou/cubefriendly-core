@@ -34,6 +34,7 @@ libraryDependencies ++= {
     "com.storm-enroute" %% "scalameter-core" % "0.7",
     "org.scaldi" %% "scaldi" % "0.5.4",
     "org.cubefriendly" % "cube-engine" % "0.1-SNAPSHOT",
+    "com.googlecode.concurrent-trees" % "concurrent-trees" % "2.4.0",
     "com.github.cb372" %% "scalacache-lrumap" % "0.6.4",
     "com.typesafe.akka" %% "akka-stream-experimental" % akkaStreamV,
     "org.specs2" %% "specs2-core" % "2.4.15" % "test")
