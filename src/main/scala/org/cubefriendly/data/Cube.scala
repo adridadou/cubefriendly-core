@@ -276,8 +276,9 @@ case class Cube(internal: DataInternals, cubeData: CubeData) {
     }
   }
 
-  def searchDimension(dimension:String, lang:Option[Language],func:String, args:Map[String, String], limit:Int) : Vector[String] = {
-    DimensionValuesSelector.funcs(func).select(this,dimension,lang,args).take(limit).toVector
+  def searchDimension(dimension:String, lang:Option[Language],func:String, args:Map[String, String], limit:Option[Int]) : Vector[String] = {
+    val values = DimensionValuesSelector.funcs(func).select(this,dimension,lang,args)
+    limit.map(values.take).getOrElse(values).toVector
   }
 
   def dimension(name:String, lang:Option[Language]):Iterable[String] = {
