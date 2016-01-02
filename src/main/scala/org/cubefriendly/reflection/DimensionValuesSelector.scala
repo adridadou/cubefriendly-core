@@ -5,7 +5,6 @@ import com.googlecode.concurrenttrees.suffix.{ConcurrentSuffixTree, SuffixTree}
 import org.cubefriendly.CubefriendlyException
 import org.cubefriendly.data.{ValuesToCodes, Index, Cube}
 import org.cubefriendly.processors.Language
-import scala.collection.JavaConversions._
 import scala.reflect.runtime.universe._
 import scalacache._
 import lrumap._
@@ -45,7 +44,6 @@ object DimensionValuesSelector extends FunctionsHolder[DimensionValuesSelector]{
         |    val term = args("term")
         |    val found = Option(index.getValueForExactKey(term.toLowerCase))
         |    val result = index.getKeysContaining(term.toLowerCase).iterator()
-        |   println(found)
         |    found.toIterator ++ result.map(index.getValueForExactKey)
       """.stripMargin
     register("search", select)
@@ -72,16 +70,4 @@ object DimensionValuesSelector extends FunctionsHolder[DimensionValuesSelector]{
 
   registerSearch()
 
-}
-
-
-class Top extends DimensionValuesSelector{
-  override def select(cube: Cube, dimension: String, lang: Option[Language], args: Map[String, String]): Iterator[String] = {
-    val index = suffixIndex(cube,dimension,lang)
-    val term = args("term")
-    val found = Option(index.getValueForExactKey(term))
-    val result = index.getKeysContaining(term).iterator()
-
-    found.toIterator ++ result.map(index.getValueForExactKey)
-  }
 }

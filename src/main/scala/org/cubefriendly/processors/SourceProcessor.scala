@@ -3,7 +3,7 @@ package org.cubefriendly.processors
 import java.io.File
 
 import akka.actor.ActorSystem
-import akka.stream.io.SynchronousFileSource
+import akka.stream.scaladsl.FileIO
 import akka.stream.{ActorMaterializer, Materializer}
 import org.cubefriendly.CubefriendlyException
 import org.cubefriendly.data.Cube
@@ -51,7 +51,7 @@ class DataProcessorProviderImpl extends DataProcessorProvider {
 
   override def process(name: String, source: File, dest: File): Future[Cube] = {
     val processor = getProcessorByFilename(source.getName,dest)
-    SynchronousFileSource(source).runFold(processor)(
+    FileIO.fromFile(source).runFold(processor)(
       (processor, a) => processor.process(a.decodeString(processor.defaultEncoding).toCharArray)
     ).map(_.complete())
   }

@@ -1,6 +1,6 @@
 package org.cubefriendly
 
-import org.cubefriendly.reflection.{ResultTransformer, DimensionValuesSelector, Aggregator}
+import org.cubefriendly.reflection.{ResultTransformer, Aggregator}
 import org.specs2.mutable._
 /**
  * Cubefriendly
