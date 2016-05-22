@@ -37,7 +37,7 @@ trait DataProcessorProvider {
   implicit def executor: ExecutionContextExecutor
 
   def process(name: String, source: File, dest: File): Future[Cube]
-  def getProcessorByFilename(name:String, destination:File):DataProcessor
+  def processorByFilename(name:String, destination:File):DataProcessor
 }
 
 class DataProcessorModule extends Module {
@@ -50,13 +50,13 @@ class DataProcessorProviderImpl extends DataProcessorProvider {
   override implicit val materializer: Materializer = ActorMaterializer()
 
   override def process(name: String, source: File, dest: File): Future[Cube] = {
-    val processor = getProcessorByFilename(source.getName,dest)
+    val processor = processorByFilename(source.getName,dest)
     FileIO.fromFile(source).runFold(processor)(
       (processor, a) => processor.process(a.decodeString(processor.defaultEncoding).toCharArray)
     ).map(_.complete())
   }
 
-  def getProcessorByFilename(n:String, dest:File):DataProcessor = n match {
+  def processorByFilename(n:String, dest:File):DataProcessor = n match {
     case name if name.endsWith(".px") => new PxProcessor(dest).name(name)
     case name if name.endsWith(".csv") => new CsvProcessor(dest).name(name)
     case name => throw new CubefriendlyException("could not determine the file type of " + name)
