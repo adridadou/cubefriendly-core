@@ -8,6 +8,6 @@ Cubefriendly core library
 
 You can use cubefriendly-core as a library to embed it into your application.
 
-If you are looking for the standalone application, please go to https://github.com/cubefriendly/cubefriendly-studio 
+If you are looking for the standalone application, please go to https://github.com/adridadou/cubefriendly-server
 
 Documentation will come in the Wiki
